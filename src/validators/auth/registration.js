@@ -1,5 +1,5 @@
 import {z} from "zod" ;
-import responseHelper from "../../helper/response.helper.js" ;
+import responseHelper from "../../utils/response.js" ;
 
     const registrationSchema =  z.object({
             name: z.string().min(3, {message: "Name must be at least 3 characters long"}).max(50, {message: "Name must be at most 50 characters long"}).trim(),

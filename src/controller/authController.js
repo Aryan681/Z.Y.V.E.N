@@ -1,34 +1,85 @@
-import responseHelper from "../helper/response.helper";
+import responseHelper from "../utils/response.js";
 import logger from "../utils/logger.js";
-import authService from "../services/authService.js";
+import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
+
 const authController = {
   registration: async (req, res) => {
     try {
       const { name, email, password } = req.body;
       const result = await authService.registration(name, email, password);
       if (!result) {
+        logger.warn(`Registration failed. Email already exists: ${email}`);
         return responseHelper.customResponse(
           res,
-          defaults.ERROR_CODE,
+          defaults.SERVER_ERROR_CODE,
           "Registration failed",
           { error: "Unable to register user" },
         );
       }
+
+      logger.info(`User registered successfully: ${email}`);
+
       return responseHelper.customResponse(
         res,
         defaults.CREATED_CODE,
         defaults.SUCCESS_MESSAGE,
-        { message: "User registered successfully" },
+        {
+          message: "User registered successfully",
+        },
       );
     } catch (error) {
-      logger.info("registration controllererror:" + error.message);
+      logger.error("Registration Controller Error", error);
+
       return responseHelper.customResponse(
         res,
         defaults.SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        { error: "An unexpected error occurred" },
+        {
+          error: "An unexpected error occurred",
+        },
       );
     }
   },
+  verify :async (req,res)=>{
+    try{
+      const { token } = req.query;
+      if(!token){
+        return responseHelper.customResponse(
+          res,
+          defaults.ERROR_CODE,
+          defaults.ERROR_MESSAGE,
+          {error : "token is missing from the url or invalid Token"}
+        )
+      }
+      const result = await authService.verification(token);
+      if(!result.success){
+        return responseHelper.customResponse(
+          res,
+          defaults.SERVER_ERROR_CODE,
+          defaults.SERVER_ERROR_MESSAGE,
+          {error: result.message}
+        );      
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.SUCCESS_CODE,
+        defaults.SUCCESS_MESSAGE,
+        {
+          message: "User verified successfully",
+        }, 
+      )
+
+    }catch(error){
+      logger.error("error occur in the verification ",error);
+      return responseHelper.customResponse(
+        res,
+        defaults.SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        {error: "error in verifying user"}
+      );
+    }
+  }
 };
+
+export default authController;

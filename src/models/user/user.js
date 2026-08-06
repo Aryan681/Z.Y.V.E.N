@@ -27,4 +27,4 @@ const Profile = async()=> {
         console.error("Error creating users table:", error);
     }
 }
-Profile() ;
+export default Profile ;

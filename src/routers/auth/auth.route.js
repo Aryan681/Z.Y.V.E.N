@@ -1,8 +1,9 @@
 import {Router }from "express" ;
-// import {registration} from "../../controller/user/user.controller.js" ;
+import authController from "../../controller/authController.js";
 import registrationValidation from "../../validators/auth/registration.js" ;
 const router = Router() ;
 
-router.route("/register").post(registrationValidation) ;
+router.route("/register").post(registrationValidation,authController.registration) ;
+router.route("/verify").get(authController.verify);
 
 export default router ;
