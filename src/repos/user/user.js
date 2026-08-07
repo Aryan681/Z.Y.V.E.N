@@ -2,7 +2,21 @@ import pool from "../../config/db.js";
 const userRepo = {
   findUserByEmail: async (email) => {
     try {
-      const query = "SELECT email FROM users WHERE email = $1";
+      const query = `
+        SELECT
+            id,
+            name,
+            email,
+            password,
+            role,
+            provider,
+            is_verified,
+            verification_token,
+            verification_token_expires,
+            refresh_token
+        FROM users
+        WHERE email = $1
+    `;
       const values = [email];
       const result = await pool.query(query, values);
       return result.rows[0] || null;
@@ -63,6 +77,27 @@ const userRepo = {
 
     const values = [userId];
     const result = await pool.query(query, values);
+    return result.rows[0];
+  },
+updateToken: async (userId, verificationToken, tokenExpire) => {
+    const query = `
+        UPDATE users
+        SET
+            verification_token = $1,
+            verification_token_expires = $2,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id
+    `;
+
+    const values = [
+        verificationToken,
+        tokenExpire,
+        userId,
+    ];
+
+    const result = await pool.query(query, values);
+
     return result.rows[0];
 },
 };

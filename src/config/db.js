@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-
+import logger from "./logger.js";
 let connected = false;
 const pool = new Pool({
  user: process.env.DB_USER,
@@ -10,6 +10,6 @@ const pool = new Pool({
 }) ;
 // console.log('pool:', pool);s
 pool.query("SELECT NOW()")
-    .then(() => console.log("✅ PostgreSQL connected"))
-    .catch(err => console.error("❌ DB Error:", err));
+    .then(() => logger.info("PostgreSQL connected"))
+    .catch(err => logger.error("❌ DB Error:", err));
 export default pool ;

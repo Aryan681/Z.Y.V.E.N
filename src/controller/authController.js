@@ -18,7 +18,7 @@ const authController = {
         );
       }
 
-      logger.info(`User registered successfully: ${email}`);
+      req.log.info(`User registered successfully: ${email}`);
 
       return responseHelper.customResponse(
         res,
@@ -41,45 +41,84 @@ const authController = {
       );
     }
   },
-  verify :async (req,res)=>{
-    try{
+  verify: async (req, res) => {
+    try {
       const { token } = req.query;
-      if(!token){
+      if (!token) {
         return responseHelper.customResponse(
           res,
           defaults.ERROR_CODE,
           defaults.ERROR_MESSAGE,
-          {error : "token is missing from the url or invalid Token"}
-        )
+          { error: "token is missing from the url or invalid Token" },
+        );
       }
       const result = await authService.verification(token);
-      if(!result.success){
+      if (!result.success) {
         return responseHelper.customResponse(
           res,
           defaults.SERVER_ERROR_CODE,
           defaults.SERVER_ERROR_MESSAGE,
-          {error: result.message}
-        );      
+          { error: result.message },
+        );
       }
+      req.log.info(`User email verified: ${email}`);
+
       return responseHelper.customResponse(
         res,
         defaults.SUCCESS_CODE,
         defaults.SUCCESS_MESSAGE,
         {
           message: "User verified successfully",
-        }, 
-      )
-
-    }catch(error){
-      logger.error("error occur in the verification ",error);
+        },
+      );
+    } catch (error) {
+      logger.error("error occur in the verification ", error);
       return responseHelper.customResponse(
         res,
         defaults.SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        {error: "error in verifying user"}
+        { error: "error in verifying user" },
       );
     }
-  }
+  },
+  resendLink: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        logger.warn("user email is missing :", email);
+        return responseHelper.customResponse(
+          res,
+          defaults.ERROR_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "user email is missing" },
+        );
+      }
+      const resent = await authService.resendVerificationUrl(email);
+      if (!resent.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.ERROR_CODE,
+          defaults.SERVER_ERROR_MESSAGE,
+          { error: resent.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.SUCCESS_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: "Verification email sent successfully." },
+      );
+    } catch (error) {
+      logger.error("Resend verification controller error", error);
+
+      return responseHelper.customResponse(
+        res,
+        defaults.SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "fail to sent the verification link" },
+      );
+    }
+  },
 };
 
 export default authController;

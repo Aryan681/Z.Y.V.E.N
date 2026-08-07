@@ -5,6 +5,7 @@ import passwordHelper from "../utils/password.js";
 import tokenHelper from "../utils/token.js";
 import emailService from "./email.service.js";
 import urlHelper from "../utils/url.js";
+import { TypeOverrides } from "pg";
 const authService = {
   registration: async (name, email, password) => {
     try {
@@ -15,7 +16,8 @@ const authService = {
       const hashedPassword = await passwordHelper.hashPassword(password);
       const verificationToken = await tokenHelper.generateVerificationToken();
       const tokenExpire = new Date(Date.now() + 10 * 60 * 1000);
-      const generatedUrl = await urlHelper.generateVerificationUrl(verificationToken);
+      const generatedUrl =
+        await urlHelper.generateVerificationUrl(verificationToken);
       const user = await userRepo.createUser(
         name,
         email,
@@ -71,6 +73,44 @@ const authService = {
       };
     } catch (error) {
       logger.error("Verification Service Error", error);
+
+      throw error;
+    }
+  },
+  resendVerificationUrl: async (email) => {
+    try {
+      const user = await userRepo.findUserByEmail(email);
+
+      if (!user) {
+        logger.warn(`Resend verification failed. User not found: ${email}`);
+
+        return {
+          success: false,
+          message: "User does not exist",
+        };
+      }
+
+      if (user.is_verified) {
+        logger.warn(`User already verified: ${email}`);
+
+        return {
+          success: false,
+          message: "User is already verified",
+        };
+      }
+
+      const verificationToken = tokenHelper.generateVerificationToken();
+      const tokenExpire = new Date(Date.now() + 10 * 60 * 1000);
+      await userRepo.updateToken(user.id, verificationToken, tokenExpire);
+      const generatedUrl = urlHelper.generateVerificationUrl(verificationToken);
+      await emailService.sendVerificationMail(email, generatedUrl);
+      logger.info(`Verification email resent successfully: ${email}`);
+      return {
+        success: true,
+        message: "Verification email sent successfully",
+      };
+    } catch (error) {
+      logger.error("Resend verification service error", error);
 
       throw error;
     }

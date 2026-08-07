@@ -1,5 +1,5 @@
 import pool from "../../config/db.js" ;
-
+import logger from "../../config/logger.js";
 const Profile = async()=> {
     try {
         await pool.query(
@@ -21,10 +21,10 @@ const Profile = async()=> {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`
         )
-       console.log('users table is created:');
+      logger.info('users table is created');
 
     } catch (error) {
-        console.error("Error creating users table:", error);
+        logger.error("Error creating users table:", error);
     }
 }
 export default Profile ;
