@@ -15,9 +15,7 @@ const authService = {
       const hashedPassword = await passwordHelper.hashPassword(password);
       const verificationToken = await tokenHelper.generateVerificationToken();
       const tokenExpire = new Date(Date.now() + 10 * 60 * 1000);
-      const generatedUrl =
-        await urlHelper.generateVerificationUrl(verificationToken);
-      logger.debug("urlGeneration", generatedUrl);
+      const generatedUrl = await urlHelper.generateVerificationUrl(verificationToken);
       const user = await userRepo.createUser(
         name,
         email,
