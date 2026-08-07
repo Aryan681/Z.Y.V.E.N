@@ -1,6 +1,6 @@
 import { date } from "zod";
 import userRepo from "../repos/user/user.js";
-import logger from "../utils/logger.js";
+import logger from "../config/logger.js";
 import passwordHelper from "../utils/password.js";
 import tokenHelper from "../utils/token.js";
 import emailService from "./email.service.js";

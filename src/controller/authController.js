@@ -1,5 +1,5 @@
 import responseHelper from "../utils/response.js";
-import logger from "../utils/logger.js";
+import logger from "../config/logger.js";
 import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
 
@@ -14,7 +14,7 @@ const authController = {
           res,
           defaults.SERVER_ERROR_CODE,
           "Registration failed",
-          { error: "Unable to register user" },
+          { error: "Email already exists" },
         );
       }
 

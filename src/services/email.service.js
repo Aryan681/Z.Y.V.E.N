@@ -1,6 +1,6 @@
 
 import transporter from "../config/email.js";
-import logger from "../utils/logger.js";
+import logger from "../config/logger.js";
 
 const emailService = {
     async sendVerificationMail(email, verificationUrl) {
