@@ -115,5 +115,33 @@ const authService = {
       throw error;
     }
   },
+  verifyPassword: async (email,password)=>{
+    try {
+      const user = await userRepo.findUserByEmail(email);
+      if(!user){
+        logger.warn(`user not found with email ${email}`);
+        return {
+          success: false,
+          message: "user not found",
+        };
+      }
+      const isPasswordMatch = await passwordHelper.verifyPassword(password,user.password);
+      if(!isPasswordMatch){
+        logger.warn(`password not match with the user ${email}`);
+        return {
+          success: false,
+          message: "password not match",
+        };
+      }
+      return {
+        success: true,
+        user: user,
+      };
+    } catch (error) {
+      logger.error("verify password service error", error);
+      throw error;
+    }
+  },
+  
 };
 export default authService;

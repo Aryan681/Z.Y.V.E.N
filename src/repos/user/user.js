@@ -79,7 +79,7 @@ const userRepo = {
     const result = await pool.query(query, values);
     return result.rows[0];
   },
-updateToken: async (userId, verificationToken, tokenExpire) => {
+  updateToken: async (userId, verificationToken, tokenExpire) => {
     const query = `
         UPDATE users
         SET

@@ -13,5 +13,14 @@ const passwordHelper = {
             throw error ;
         }
     } ,
+    verifyPassword : async (password,hashedPassword) => {
+        try {
+            const isPasswordMatch = await bcrypt.compare(password,hashedPassword) ;
+            return isPasswordMatch ;
+        } catch (error) {
+            logger.error("Password Verification Error", error);
+            throw error ;
+        }
+    },
 }
 export default passwordHelper ;
