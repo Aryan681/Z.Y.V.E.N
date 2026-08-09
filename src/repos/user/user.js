@@ -90,15 +90,12 @@ const userRepo = {
         RETURNING id
     `;
 
-    const values = [
-        verificationToken,
-        tokenExpire,
-        userId,
-    ];
+    const values = [verificationToken, tokenExpire, userId];
 
     const result = await pool.query(query, values);
 
     return result.rows[0];
-},
+  },
+
 };
 export default userRepo;

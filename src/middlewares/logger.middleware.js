@@ -13,6 +13,7 @@ const requestLogger = pinoHttp({
         "req.body.password",
         "req.body.refreshToken",
         "req.body.accessToken",
+        "req.query.token",
     ],
 });
 

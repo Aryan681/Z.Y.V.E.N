@@ -21,6 +21,6 @@ const defaults = {
     INVALID_REQUEST_MESSAGE : "Invalid Request",
     NOT_FOUND_MESSAGE : "Not Found",
 
-    BCRYPT_SALT_ROUNDS_CODE :10,
+    BCRYPT_SALT_ROUNDS :10,
 }
 export default defaults ;

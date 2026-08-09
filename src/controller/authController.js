@@ -2,12 +2,11 @@ import responseHelper from "../utils/response.js";
 import logger from "../config/logger.js";
 import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
-
 const authController = {
   registration: async (req, res) => {
     try {
-      const { name, email, password } = req.body;
-   const result = await authService.registration(name, email, password);
+    const { name, email, password } = req.body;
+    const result = await authService.registration(name, email, password);
 
     if (!result) {
         logger.warn(`Registration failed. Email already exists: ${email}`);
@@ -30,10 +29,10 @@ const authController = {
 
       return responseHelper.customResponse(
         res,
-        defaults.SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         {
-          error: "An unexpected error occurred",
+          error: error.message,
         },
       );
     }
@@ -44,7 +43,7 @@ const authController = {
       if (!token) {
         return responseHelper.customResponse(
           res,
-          defaults.ERROR_CODE,
+          defaults.BAD_REQUEST_CODE,
           defaults.ERROR_MESSAGE,
           { error: "token is missing from the url or invalid Token" },
         );
@@ -58,23 +57,23 @@ const authController = {
           { error: result.message },
         );
       }
-      req.log.info(`User email verified: ${email}`);
+    
 
       return responseHelper.customResponse(
         res,
-        defaults. OK_CODE,
+        defaults.OK_CODE,
         defaults.SUCCESS_MESSAGE,
         {
           message: "User verified successfully",
         },
       );
     } catch (error) {
-      logger.error("error occur in the verification ", error);
+      logger.error(`error occur in the verification controller ${ error} `);
       return responseHelper.customResponse(
         res,
-        defaults.SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        { error: "error in verifying user" },
+        { error: error.message },
       );
     }
   },
@@ -110,7 +109,7 @@ const authController = {
 
       return responseHelper.customResponse(
         res,
-        defaults.SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         { error: "fail to sent the verification link" },
       );
@@ -118,7 +117,7 @@ const authController = {
   },
   login : async(req,res)=>{
     try {
-    const {email,password} = req.body ;
+    const {email,password,deviceId} = req.body ;
     if(!email || !password){
       logger.warn("one of the field is missing ");
       return responseHelper.customResponse(
@@ -128,7 +127,12 @@ const authController = {
         {error:"please enter email and password"}
       );
     }
-    const verifying = await authService.verifyPassword(email, password);
+     const sessionContext = {
+      deviceId,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] || "unknown",
+    };
+    const verifying = await authService.login(email, password,sessionContext);
 
     if (!verifying.success) {
         logger.warn(`Login failed for email: ${email}`);
@@ -137,18 +141,27 @@ const authController = {
             defaults.UNAUTHORIZED_CODE,
             "Authentication failed",
             {
-                error: "Invalid email or password",
+                error: verifying.message,
             },
         );
     }
+    req.log.info(`User login successfully: ${email}`);
+    
     return responseHelper.customResponse(
       res,
       defaults. OK_CODE,
       defaults.SUCCESS_MESSAGE,
-      {message:"user login successfully"}
+      {message:"user login successfully",accessToken:verifying.accessToken,refreshToken:verifying.refreshToken,session:verifying.session}
     )
     } catch (error) {
-      
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        {
+          error: error.message,
+        },
+      );
     }
   }
 };
