@@ -10,9 +10,14 @@ router.route("/register").post(validate(registrationSchema), authController.regi
 router.route("/verify").get(authController.verify);
 router.route("/resend-verification").post(validate(resendVerificationSchema), authController.resendLink);
 
-//login & logout routes 
+//login 
 router.route("/login").post(validate(loginSchema),authController.login);
-router.route("/logout").post(validate(logoutSchema),authController.logout);
+
+// logout routes 
+// router.route("/logout").post(validate(logoutSchema),authController.logout);
+// router.route("/logout/allDevices").post(validate(logoutSchema),authController.logoutAllDevices);
+// router.route("/logout/specificDevice").post(validate(logoutSchema),authController.logoutSpecificDevice);
+// router.route("/all-sessions").get(authController.allSessions);
 
 //password related routes
 // router.route("/password-reset").post(validate( passwordResetSchema),authController.passwordReset);
@@ -20,7 +25,7 @@ router.route("/logout").post(validate(logoutSchema),authController.logout);
 // router.route("/change-password").post(validate( changePasswordSchema),authController.changePassword);
 
 //jwt related routes
-//router.route("/refreshToken").post(validate(refreshTokenSchema)authController.refreshToken)
+// router.route("/refreshToken").post(validate(refreshTokenSchema),authController.refreshToken);
 
 //google related routes
 // router.route("/google-callback").post(authController.googleRegistration);
