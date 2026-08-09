@@ -1,7 +1,8 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {registrationSchema,resendVerificationSchema,loginSchema} from "../../validators/auth.validator.js";
+import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
+import authenticate from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -12,6 +13,9 @@ router.route("/resend-verification").post(validate(resendVerificationSchema), au
 
 //login 
 router.route("/login").post(validate(loginSchema),authController.login);
+
+//jwt related routes
+router.route("/refreshToken").post(validate(refreshTokenSchema),authenticate.verifyToken,authController.rotateRefreshToken);
 
 // logout routes 
 // router.route("/logout").post(validate(logoutSchema),authController.logout);
@@ -24,8 +28,7 @@ router.route("/login").post(validate(loginSchema),authController.login);
 // router.route("/forgot-password").post(validate( forgotPasswordSchema),authController.forgotPassword);
 // router.route("/change-password").post(validate( changePasswordSchema),authController.changePassword);
 
-//jwt related routes
-// router.route("/refreshToken").post(validate(refreshTokenSchema),authController.refreshToken);
+
 
 //google related routes
 // router.route("/google-callback").post(authController.googleRegistration);

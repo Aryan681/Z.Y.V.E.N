@@ -4,7 +4,7 @@ const Session = async () => {
   try {
     await Pool.query(
       `CREATE TABLE IF NOT EXISTS sessions (
-        id SERIAL PRIMARY KEY,
+        session_id UUID PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         refresh_token_hash VARCHAR(255) UNIQUE NOT NULL,
         device_id VARCHAR(255) NOT NULL,
@@ -20,7 +20,7 @@ const Session = async () => {
     );
     logger.info("sessions table is created");
   } catch (error) {
-    logger.error("Error creating sessions table:", error);
+    logger.error(`Error creating sessions table: ${error.message}`);
   }
 };
 export default Session;

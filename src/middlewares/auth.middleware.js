@@ -3,6 +3,7 @@ import logger from "../config/logger.js";
 import defaults from "../constants/defaults.js";
 import jwtConfig from "../config/jwt.js";
 import tokenService from "../services/token.service.js";
+import responseHelper from "../utils/response.js";
 
 const authMiddleware = {
   extractToken: (req) => {
@@ -57,10 +58,10 @@ const authMiddleware = {
 
       return responseHelper.customResponse(
         res,
-       defaults.SERVICE_UNAVAILABLE_CODE,
+        defaults.SERVICE_UNAVAILABLE_CODE,
         defaults.SERVICE_UNAVAILABLE_MESSAGE,
         {
-          error: "auth middleware error",
+          error: error.message,
         },
       );
     }

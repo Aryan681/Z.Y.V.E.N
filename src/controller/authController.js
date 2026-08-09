@@ -146,12 +146,18 @@ const authController = {
         );
     }
     req.log.info(`User login successfully: ${email}`);
+    res.cookie("refreshToken", verifying.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     
     return responseHelper.customResponse(
       res,
       defaults. OK_CODE,
       defaults.SUCCESS_MESSAGE,
-      {message:"user login successfully",accessToken:verifying.accessToken,refreshToken:verifying.refreshToken,session:verifying.session}
+      {message:"user login successfully",accessToken:verifying.accessToken,session:verifying.session}
     )
     } catch (error) {
       return responseHelper.customResponse(
@@ -163,7 +169,47 @@ const authController = {
         },
       );
     }
-  }
+  },
+    rotateRefreshToken: async (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "refresh token is missing from or  invalid Token" },
+        );
+      }
+      const result = await authService.rotateRefreshToken(refreshToken);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.UNAUTHORIZED_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        {
+          message: "Refresh token rotated successfully",
+          accessToken: result.accessToken,
+          session: result.session,
+        },
+      );
+    } catch (error) {
+      logger.error(`error occur in the rotation refresh token controller${error} `);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: error.message },
+      );
+    }
+  },
 };
 
 export default authController;

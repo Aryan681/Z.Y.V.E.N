@@ -25,7 +25,7 @@ const tokenService = {
   },
   verifyAccessToken: (token) => {
     try {
-      const decodedToken = jwt.verify(token, jwtConfig.access.secret, {
+      const decoded = jwt.verify(token, jwtConfig.access.secret, {
         algorithms: [jwtConfig.algorithm],
         audience: jwtConfig.audience,
         issuer: jwtConfig.issuer,
@@ -35,7 +35,7 @@ const tokenService = {
       }
       return decoded;
     } catch (error) {
-      throw new Error("Invalid access token");
+      throw new Error(`Invalid access token: ${error.message}`);
     }
   },
   generateRefreshToken: (user,sessionId) => {
@@ -54,12 +54,12 @@ const tokenService = {
         audience: jwtConfig.audience,
       });
     } catch (error) {
-      throw new Error("Error generating refresh token");
+      throw new Error(`Error generating refresh token: ${error.message}`);
     }
   },
   verifyRefreshToken: (token) => {
     try {
-      const decodedToken = jwt.verify(token, jwtConfig.refresh.secret, {
+      const decoded = jwt.verify(token, jwtConfig.refresh.secret, {
         algorithms: [jwtConfig.algorithm],
         audience: jwtConfig.audience,
         issuer: jwtConfig.issuer,
@@ -69,7 +69,7 @@ const tokenService = {
       }
       return decoded;
     } catch (error) {
-      throw new Error("Invalid refresh token");
+      throw new Error(`Invalid refresh token: ${error.message}`);
     }
   },
 };
