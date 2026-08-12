@@ -52,7 +52,7 @@ const authController = {
       if (!result.success) {
         return responseHelper.customResponse(
           res,
-          defaults.ERROR_CODE,
+          defaults.CONFLICT_CODE,
           result.message,
           { error: result.message },
         );
@@ -84,7 +84,7 @@ const authController = {
         logger.warn("user email is missing :", email);
         return responseHelper.customResponse(
           res,
-          defaults.ERROR_CODE,
+          defaults.CONFLICT_CODE,
           defaults.ERROR_MESSAGE,
           { error: "user email is missing" },
         );
@@ -93,19 +93,19 @@ const authController = {
       if (!resent.success) {
         return responseHelper.customResponse(
           res,
-          defaults.ERROR_CODE,
-          defaults.SERVER_ERROR_MESSAGE,
+          defaults.CONFLICT_CODE,
+          resent.message,
           { error: resent.message },
         );
       }
       return responseHelper.customResponse(
         res,
-        defaults. OK_CODE,
+        defaults.OK_CODE,
         defaults.SUCCESS_MESSAGE,
         { message: "Verification email sent successfully." },
       );
     } catch (error) {
-      logger.error("Resend verification controller error", error);
+      logger.error(`Resend verification controller error ${error}`);
 
       return responseHelper.customResponse(
         res,
@@ -122,7 +122,7 @@ const authController = {
       logger.warn("one of the field is missing ");
       return responseHelper.customResponse(
         res,
-        defaults.ERROR_CODE,
+        defaults.CONFLICT_CODE,
         defaults.ERROR_MESSAGE,
         {error:"please enter email and password"}
       );
@@ -170,7 +170,7 @@ const authController = {
       );
     }
   },
-    rotateRefreshToken: async (req, res) => {
+  rotateRefreshToken: async (req, res) => {
     try {
       const { refreshToken } = req.body;
       if (!refreshToken) {

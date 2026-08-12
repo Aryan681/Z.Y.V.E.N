@@ -3,19 +3,20 @@ import authController from "../../controller/authController.js";
 import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
+import ratelimiter from "../../middlewares/rateLimit.middleware.js";
 
 const router = Router();
 
 //registration & verificatoin routes
-router.route("/register").post(validate(registrationSchema), authController.registration);
+router.route("/register").post(ratelimiter.registrationRateLimit,validate(registrationSchema), authController.registration);
 router.route("/verify").get(authController.verify);
-router.route("/resend-verification").post(validate(resendVerificationSchema), authController.resendLink);
+router.route("/resend-verification").post(ratelimiter.resendVerificationRateLimit,validate(resendVerificationSchema), authController.resendLink);
 
 //login 
-router.route("/login").post(validate(loginSchema),authController.login);
+router.route("/login").post(ratelimiter.loginRateLimit,validate(loginSchema),authController.login);
 
 //jwt related routes
-router.route("/refreshToken").post(validate(refreshTokenSchema),authenticate.verifyToken,authController.rotateRefreshToken);
+router.route("/refreshToken").post(ratelimiter.refreshTokenRateLimit,validate(refreshTokenSchema),authController.rotateRefreshToken);
 
 // logout routes 
 // router.route("/logout").post(validate(logoutSchema),authController.logout);

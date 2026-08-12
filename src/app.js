@@ -2,6 +2,7 @@ import express from 'express';
 import routers from './routers/index.js' ;
 import requestLogger from './middlewares/logger.middleware.js';
 import cookieParser from 'cookie-parser';
+import redisClient from './config/redis.js';
 const app = express() ;
 
 

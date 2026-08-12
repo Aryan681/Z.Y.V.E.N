@@ -177,7 +177,7 @@ const authService = {
       return {
         success: true,
         user: user,
-        accessToken: accessToken,
+        accessToken:`Bearer ${accessToken}`,
         refreshToken: refreshToken,
         session: createSession,
       };
@@ -255,7 +255,7 @@ const authService = {
       // 10. Return new credentials
       return {
         success: true,
-        accessToken,
+        accessToken:`Bearer ${accessToken}`,
         refreshToken: newRefreshToken,
       };
     } catch (error) {
