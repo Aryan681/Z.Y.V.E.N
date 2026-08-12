@@ -11,7 +11,7 @@ const Profile = async()=> {
                 refresh_token VARCHAR(255),
                 role VARCHAR(50) DEFAULT 'user',
                 provider VARCHAR(50) DEFAULT 'email',
-                google_id VARCHAR(255),
+                google_id VARCHAR(255) UNIQUE,
                 is_verified BOOLEAN DEFAULT false,
                 verification_token VARCHAR(255) UNIQUE,
                 verification_token_expires TIMESTAMP,

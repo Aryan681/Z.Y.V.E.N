@@ -117,6 +117,76 @@ const authService = {
       throw error;
     }
   },
+  createAuthenticatedSession: async (user, sessionContext) => {
+  try {
+    // 1. Generate session ID
+    const sessionId = crypto.randomUUID();
+
+    // 2. Generate your application JWTs
+    const accessToken = tokenService.generateAccessToken(user);
+
+    const refreshToken = tokenService.generateRefreshToken(
+      user,
+      sessionId,
+    );
+
+    // 3. Hash refresh token before storing it
+    const hashedRefreshToken =
+      tokenHelper.hashToken(refreshToken);
+
+    // 4. Parse device information
+    const parser = new UAParser(
+      sessionContext.userAgent,
+    );
+
+    const parsedDevice = parser.getResult();
+
+    const deviceName =
+      [
+        parsedDevice.browser.name,
+        parsedDevice.os.name,
+      ]
+        .filter(Boolean)
+        .join(" on ") || "unknown";
+
+    // 5. Create session
+    const createSession =
+      await sessionRepo.createSession({
+        sessionId,
+        userId: user.id,
+        refreshTokenHash: hashedRefreshToken,
+        deviceId: sessionContext.deviceId,
+        deviceName,
+        ipAddress: sessionContext.ipAddress,
+        userAgent: sessionContext.userAgent,
+        expiresAt: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ),
+      });
+
+    if (!createSession) {
+      return {
+        success: false,
+        message: "Error creating user session",
+      };
+    }
+
+    return {
+      success: true,
+      user,
+      accessToken: `Bearer ${accessToken}`,
+      refreshToken,
+      session: createSession,
+    };
+  } catch (error) {
+    logger.error(
+      { error },
+      "Create authenticated session error",
+    );
+
+    throw error;
+  }
+},
   login: async (email, password, sessionContext) => {
     try {
       const user = await userRepo.findUserByEmail(email);
@@ -145,42 +215,14 @@ const authService = {
           message: "password not match",
         };
       }
-      const sessionId = crypto.randomUUID();
-      const accessToken = tokenService.generateAccessToken(user);
-      const refreshToken = tokenService.generateRefreshToken(user, sessionId);
-      const hashedRefreshToken = await tokenHelper.hashToken(refreshToken);
-      const parser = new UAParser(sessionContext.userAgent);
-      const parsedDevice = parser.getResult();
-      const deviceName =
-        [parsedDevice.browser.name, parsedDevice.os.name]
-          .filter(Boolean)
-          .join(" on ") || "unknown";
+    
 
-      const createSession = await sessionRepo.createSession({
-        sessionId: sessionId,
-        userId: user.id,
-        refreshTokenHash: hashedRefreshToken,
-        deviceId: sessionContext.deviceId,
-        deviceName: deviceName,
-        ipAddress: sessionContext.ipAddress,
-        userAgent: sessionContext.userAgent,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-
-      if (!createSession) {
-        return {
-          success: false,
-          message: "error in updating refresh token",
-        };
-      }
-
-      return {
-        success: true,
-        user: user,
-        accessToken:`Bearer ${accessToken}`,
-        refreshToken: refreshToken,
-        session: createSession,
-      };
+      // Everything after authentication is shared
+    const result =await authService.createAuthenticatedSession(
+      user,
+      sessionContext,
+    );
+      return result
     } catch (error) {
       logger.error(`verify password service  ${error}`);
       throw error;

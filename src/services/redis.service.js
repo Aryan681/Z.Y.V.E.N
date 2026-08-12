@@ -98,6 +98,15 @@ const redisService = {
       throw error;
     }
   },
+  setWithExpiry: async (key, value, seconds) => {
+    try {
+      await redisClient.set(key, value, "EX", seconds);
+      logger.info(`Redis set key ${key} successfully`);
+    } catch (error) {
+      logger.error(`Redis set key ${key} error ${error}`);
+      throw error;
+    }
+  },
   
 
 };

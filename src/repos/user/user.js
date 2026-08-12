@@ -96,6 +96,85 @@ const userRepo = {
 
     return result.rows[0];
   },
+  findUserByGoogleId: async (googleId) => {
+    try {
+      const query = `
+        SELECT
+            id,
+            name,
+            email,
+            password,
+            role,
+            provider,
+            is_verified,
+            verification_token,
+            verification_token_expires,
+            refresh_token
+        FROM users
+        WHERE google_id = $1
+    `;
+      const values = [googleId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  },
+  linkGoogle: async (userId, googleId) => {
+    try {
+      const query = `
+                UPDATE users
+                SET
+                    google_id = $1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+                RETURNING id
+            `;
+      const values = [googleId, userId];
+      const result = await pool.query(query, values);
+      return result.rows[0]|| null;
+    } catch (error) {
+    throw error;
+    }
+  },
+  createGoogleUser: async (name, email, googleId) => {
+    try {
+      const query = `
+                INSERT INTO users (name, email, google_id,is_verified)
+                VALUES ($1, $2, $3,TRUE)
+                RETURNING email, name
+            `;
+      const values = [name, email, googleId];
+      const result = await pool.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  },
+  findUserById: async (userId) => {
+    try {
+      const query = `
+        SELECT
+            id,
+            name,
+            email,
+            password,
+            role,
+            provider,
+            is_verified,
+            verification_token,
+            verification_token_expires,
+            refresh_token
+        FROM users
+        WHERE id = $1
+    `;
+      const values = [userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  },
 
 };
 export default userRepo;

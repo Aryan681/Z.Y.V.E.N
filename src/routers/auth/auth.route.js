@@ -18,21 +18,24 @@ router.route("/login").post(ratelimiter.loginRateLimit,validate(loginSchema),aut
 //jwt related routes
 router.route("/refreshToken").post(ratelimiter.refreshTokenRateLimit,validate(refreshTokenSchema),authController.rotateRefreshToken);
 
-// logout routes 
-// router.route("/logout").post(validate(logoutSchema),authController.logout);
-// router.route("/logout/allDevices").post(validate(logoutSchema),authController.logoutAllDevices);
-// router.route("/logout/specificDevice").post(validate(logoutSchema),authController.logoutSpecificDevice);
-// router.route("/all-sessions").get(authController.allSessions);
+//google related routes
+router.route("/google").get(authController.googleRegistration);
+router.route("/google/callback").get(authController.googleCallback);
+router.route("/google/link").get(authenticate.verifyToken,authController.googleLink);
+router.route("/google/link/callback").get(authController.googleLinkCallback);
+
 
 //password related routes
 // router.route("/password-reset").post(validate( passwordResetSchema),authController.passwordReset);
 // router.route("/forgot-password").post(validate( forgotPasswordSchema),authController.forgotPassword);
 // router.route("/change-password").post(validate( changePasswordSchema),authController.changePassword);
 
+// logout routes 
+// router.route("/logout").post(validate(logoutSchema),authController.logout);
+// router.route("/logout/allDevices").post(validate(logoutSchema),authController.logoutAllDevices);
+// router.route("/logout/specificDevice").post(validate(logoutSchema),authController.logoutSpecificDevice);
+// router.route("/all-sessions").get(authController.allSessions);
 
-
-//google related routes
-// router.route("/google-callback").post(authController.googleRegistration);
 
 //email related routes
 // router.route("/change-email").post(authController.emailChange);

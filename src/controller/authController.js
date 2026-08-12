@@ -2,6 +2,7 @@ import responseHelper from "../utils/response.js";
 import logger from "../config/logger.js";
 import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
+import googleService from "../services/google.service.js";
 const authController = {
   registration: async (req, res) => {
     try {
@@ -207,6 +208,169 @@ const authController = {
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         { error: error.message },
+      );
+    }
+  },
+  googleRegistration: async (req, res) => {
+    try {
+      const result = await googleService.generateGoogleAuthUrl();
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+
+    }catch (error) {
+      logger.error(`error occur in the google registration controller${error} `);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: error.message },
+      );
+    }
+  },
+  googleCallback: async (req, res) => {
+    try {
+      const{code,state} = req.query;
+      if(!code || !state){
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "code and state are missing from the url" },
+        );
+      }
+
+      const sessionContext = {
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+        deviceId: req.get("x-device-id") || "unknown",
+      };
+      
+      const result = await googleService.handelGoogleCallback(code,state,sessionContext);
+      if (!result.success) {
+        logger.warn(`Google callback failed for code: ${code}`);
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      logger.info(`Google callback successful for code`);
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+
+  }catch (error) {
+    logger.error(`error occur in the google callback controller${error} `);
+    return responseHelper.customResponse(
+      res,
+      defaults.INTERNAL_SERVER_ERROR_CODE,
+      defaults.SERVER_ERROR_MESSAGE,
+      { error: error.message },
+    );
+  }
+  },
+  googleLink: async (req, res) => {
+    try {
+      const userId = req.user.sub;
+
+      const result =await googleService.generateGoogleLinkAuthUrl(userId);
+
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          {
+            error: result.message,
+          },
+        );
+      }
+
+     return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+
+    } catch (error) {
+      logger.error(
+        { error },
+        "Error in Google link controller",
+      );
+
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        {
+          error: error.message,
+        },
+      );
+    }
+  },
+  googleLinkCallback: async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "code and state are missing from the url" },
+        );
+      }
+
+      const result = await googleService.handleGoogleLinkCallback(
+        code,
+        state,
+      );
+
+      if (!result.success) {
+        logger.warn(`Google link callback failed for code: ${code}`);
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(
+        { error },
+        "Error in Google link callback controller",
+      );
+
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        {
+          error: defaults.SERVER_ERROR_MESSAGE,
+        },
       );
     }
   },
