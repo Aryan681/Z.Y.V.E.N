@@ -9,7 +9,7 @@ const pool = new Pool({
  port: process.env.DB_PORT,
 }) ;
 // console.log('pool:', pool);s
-pool.query("SELECT NOW()")
-    .then(() => logger.info("PostgreSQL connected"))
-    .catch(err => logger.error("❌ DB Error:", err));
+    // pool.query("SELECT NOW()")
+    //     .then(() => logger.info("PostgreSQL connected"))
+    //     .catch(err => logger.error("❌ DB Error:", err));
 export default pool ;
