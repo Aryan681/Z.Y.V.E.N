@@ -18,7 +18,10 @@ const Session = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
     );
-    logger.info("sessions table is created");
+    await Pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`
+    );
+    logger.info("sessions table and indexes created");
   } catch (error) {
     logger.error(`Error creating sessions table: ${error.message}`);
   }

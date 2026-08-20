@@ -186,7 +186,7 @@ const authService = {
 
     throw error;
   }
-},
+  },
   login: async (email, password, sessionContext) => {
     try {
       const user = await userRepo.findUserByEmail(email);
@@ -303,6 +303,117 @@ const authService = {
     } catch (error) {
       logger.error("Rotate refresh token service error", error);
 
+      throw error;
+    }
+  },
+  passwordReset: async (oldPassword, newPasswrod, userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        logger.warn(`User not found with the user id ${userId}`);
+        return {
+          success: false,
+          message: "User not found",
+        };
+      }
+      const passwordMatch = await passwordHelper.verifyPassword(
+        oldPassword,
+        user.password,
+      );
+      if (!passwordMatch) {
+        logger.warn(`Password not match with the user ${user.email}`);
+        return {
+          success: false,
+          message: "Password not match",
+        };
+      }
+      const hashedPassword = await passwordHelper.hashPassword(newPasswrod);
+      const updatedUser = await userRepo.updatePassword(
+        userId,
+        hashedPassword,
+      );
+      if (!updatedUser) {
+        logger.error("Failed to update user password");
+
+        return {
+          success: false,
+          message: "Unable to update user password",
+        };
+      }
+      await sessionRepo.revokeAllUserSessions(user.id);
+      return {
+        success: true,
+        message: "Password updated successfully",
+      };
+    } catch (error) {
+      logger.error(`Error occur in the password reset service${error} `);
+      throw error;
+    }
+  },
+  forgotPassword: async (email) => {
+    try {
+      const user = await userRepo.findUserByEmail(email);
+      if (!user) {
+        logger.warn(`User not found with the email ${email}`);
+        return {
+          success: true,
+          message:
+            "If an account exists with this email, a reset link has been sent",
+        };
+      }
+      const resetToken = tokenHelper.generateVerificationToken();
+      const tokenExpire = new Date(Date.now() + 10 * 60 * 1000);
+      await userRepo.updateResetToken(user.id, resetToken, tokenExpire);
+      const generatedUrl =
+        urlHelper.generateResetPasswordUrl(resetToken);
+      await emailService.sendPasswordResetMail(email, generatedUrl);
+      logger.info(`Reset password link sent successfully: ${email}`);
+      return {
+        success: true,
+        message: "Reset password link sent successfully",
+      };
+    } catch (error) {
+      logger.error(`Error occur in the forgot password service${error} `);
+      throw error;
+    }
+  },
+  changePassword: async (newPassword, token) => {
+    try {
+      const user = await userRepo.findUserByResetToken(token);
+      if (!user) {
+        logger.warn(`User not found with the token ${token}`);
+        return {
+          success: false,
+          message: "Invalid or expired token",
+        };
+      }
+      if (new Date() > new Date(user.reset_token_expires)) {
+        return {
+          success: false,
+          message: "Reset token expired",
+        };
+      }
+      await userRepo.updateResetToken(user.id, null, null);
+      const hashedPassword = await passwordHelper.hashPassword(newPassword);
+      const updatedUser = await userRepo.updatePassword(
+        user.id,
+        hashedPassword,
+      );
+      if (!updatedUser) {
+        logger.error("Failed to update user password");
+
+        return {
+          success: false,
+          message: "Unable to update user password",
+        };
+      }
+      await sessionRepo.revokeAllUserSessions(user.id);
+      return {
+        success: true,
+        message: "Password updated successfully",
+      };
+    } catch (error) {
+      logger.error(`Error occur in the change password service${error} `);
       throw error;
     }
   },

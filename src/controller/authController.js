@@ -6,25 +6,26 @@ import googleService from "../services/google.service.js";
 const authController = {
   registration: async (req, res) => {
     try {
-    const { name, email, password } = req.body;
-    const result = await authService.registration(name, email, password);
+      const { name, email, password } = req.body;
+      const result = await authService.registration(name, email, password);
 
-    if (!result) {
+      if (!result) {
         logger.warn(`Registration failed. Email already exists: ${email}`);
         return responseHelper.customResponse(
-            res,
-            defaults.CONFLICT_CODE,
-            "Registration failed",
-            {error: "Email already exists"},
+          res,
+          defaults.CONFLICT_CODE,
+          "Registration failed",
+          { error: "Email already exists" },
         );
-    }
+      }
       req.log.info(`User registered successfully: ${email}`);
 
       return responseHelper.customResponse(
         res,
         defaults.CREATED_CODE,
         defaults.SUCCESS_MESSAGE,
-        {message: "User registered successfully",});
+        { message: "User registered successfully" },
+      );
     } catch (error) {
       logger.error("Registration Controller Error", error);
 
@@ -33,7 +34,7 @@ const authController = {
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         {
-          error: error.message,
+          error: "An internal server error occurred",
         },
       );
     }
@@ -58,7 +59,6 @@ const authController = {
           { error: result.message },
         );
       }
-    
 
       return responseHelper.customResponse(
         res,
@@ -69,12 +69,12 @@ const authController = {
         },
       );
     } catch (error) {
-      logger.error(`error occur in the verification controller ${ error} `);
+      logger.error(`error occur in the verification controller ${error} `);
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        { error: error.message },
+        { error: "An internal server error occurred" },
       );
     }
   },
@@ -116,57 +116,65 @@ const authController = {
       );
     }
   },
-  login : async(req,res)=>{
+  login: async (req, res) => {
     try {
-    const {email,password,deviceId} = req.body ;
-    if(!email || !password){
-      logger.warn("one of the field is missing ");
-      return responseHelper.customResponse(
-        res,
-        defaults.CONFLICT_CODE,
-        defaults.ERROR_MESSAGE,
-        {error:"please enter email and password"}
+      const { email, password, deviceId } = req.body;
+      if (!email || !password) {
+        logger.warn("one of the field is missing ");
+        return responseHelper.customResponse(
+          res,
+          defaults.CONFLICT_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "please enter email and password" },
+        );
+      }
+      const sessionContext = {
+        deviceId,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || "unknown",
+      };
+      const verifying = await authService.login(
+        email,
+        password,
+        sessionContext,
       );
-    }
-     const sessionContext = {
-      deviceId,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"] || "unknown",
-    };
-    const verifying = await authService.login(email, password,sessionContext);
 
-    if (!verifying.success) {
+      if (!verifying.success) {
         logger.warn(`Login failed for email: ${email}`);
         return responseHelper.customResponse(
-            res,
-            defaults.UNAUTHORIZED_CODE,
-            "Authentication failed",
-            {
-                error: verifying.message,
-            },
+          res,
+          defaults.UNAUTHORIZED_CODE,
+          "Authentication failed",
+          {
+            error: verifying.message,
+          },
         );
-    }
-    req.log.info(`User login successfully: ${email}`);
-    res.cookie("refreshToken", verifying.refreshToken, {
+      }
+      req.log.info(`User login successfully: ${email}`);
+      res.cookie("refreshToken", verifying.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-    
-    return responseHelper.customResponse(
-      res,
-      defaults. OK_CODE,
-      defaults.SUCCESS_MESSAGE,
-      {message:"user login successfully",accessToken:verifying.accessToken,session:verifying.session}
-    )
+      });
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        {
+          message: "user login successfully",
+          accessToken: verifying.accessToken,
+          session: verifying.session,
+        },
+      );
     } catch (error) {
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         {
-          error: error.message,
+          error: "An internal server error occurred",
         },
       );
     }
@@ -202,12 +210,14 @@ const authController = {
         },
       );
     } catch (error) {
-      logger.error(`error occur in the rotation refresh token controller${error} `);
+      logger.error(
+        `error occur in the rotation refresh token controller${error} `,
+      );
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        { error: error.message },
+        { error: "An internal server error occurred" },
       );
     }
   },
@@ -228,21 +238,22 @@ const authController = {
         defaults.SUCCESS_MESSAGE,
         { message: result },
       );
-
-    }catch (error) {
-      logger.error(`error occur in the google registration controller${error} `);
+    } catch (error) {
+      logger.error(
+        `error occur in the google registration controller${error} `,
+      );
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
-        { error: error.message },
+        { error: "An internal server error occurred" },
       );
     }
   },
   googleCallback: async (req, res) => {
     try {
-      const{code,state} = req.query;
-      if(!code || !state){
+      const { code, state } = req.query;
+      if (!code || !state) {
         return responseHelper.customResponse(
           res,
           defaults.BAD_REQUEST_CODE,
@@ -256,8 +267,12 @@ const authController = {
         userAgent: req.get("user-agent") || "unknown",
         deviceId: req.get("x-device-id") || "unknown",
       };
-      
-      const result = await googleService.handelGoogleCallback(code,state,sessionContext);
+
+      const result = await googleService.handleGoogleCallback(
+        code,
+        state,
+        sessionContext,
+      );
       if (!result.success) {
         logger.warn(`Google callback failed for code: ${code}`);
         return responseHelper.customResponse(
@@ -274,22 +289,21 @@ const authController = {
         defaults.SUCCESS_MESSAGE,
         { message: result },
       );
-
-  }catch (error) {
-    logger.error(`error occur in the google callback controller${error} `);
-    return responseHelper.customResponse(
-      res,
-      defaults.INTERNAL_SERVER_ERROR_CODE,
-      defaults.SERVER_ERROR_MESSAGE,
-      { error: error.message },
-    );
-  }
+    } catch (error) {
+      logger.error(`error occur in the google callback controller${error} `);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
   },
   googleLink: async (req, res) => {
     try {
       const userId = req.user.sub;
 
-      const result =await googleService.generateGoogleLinkAuthUrl(userId);
+      const result = await googleService.generateGoogleLinkAuthUrl(userId);
 
       if (!result.success) {
         return responseHelper.customResponse(
@@ -302,25 +316,21 @@ const authController = {
         );
       }
 
-     return responseHelper.customResponse(
+      return responseHelper.customResponse(
         res,
         defaults.OK_CODE,
         defaults.SUCCESS_MESSAGE,
         { message: result },
       );
-
     } catch (error) {
-      logger.error(
-        { error },
-        "Error in Google link controller",
-      );
+      logger.error({ error }, "Error in Google link controller");
 
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,
         defaults.SERVER_ERROR_MESSAGE,
         {
-          error: error.message,
+          error: "An internal server error occurred",
         },
       );
     }
@@ -337,10 +347,7 @@ const authController = {
         );
       }
 
-      const result = await googleService.handleGoogleLinkCallback(
-        code,
-        state,
-      );
+      const result = await googleService.handleGoogleLinkCallback(code, state);
 
       if (!result.success) {
         logger.warn(`Google link callback failed for code: ${code}`);
@@ -359,10 +366,7 @@ const authController = {
         { message: result },
       );
     } catch (error) {
-      logger.error(
-        { error },
-        "Error in Google link callback controller",
-      );
+      logger.error({ error }, "Error in Google link callback controller");
 
       return responseHelper.customResponse(
         res,
@@ -371,6 +375,119 @@ const authController = {
         {
           error: defaults.SERVER_ERROR_MESSAGE,
         },
+      );
+    }
+  },
+  passwordReset: async (req, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      if (!oldPassword || !newPassword) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "old password and new password are missing from the url" },
+        );
+      }
+      const result = await authService.passwordReset(
+        oldPassword,
+        newPassword,
+        req.user.sub,
+      );
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error occur in the password reset controller${error} `);
+
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        {
+          error: "An internal server error occurred",
+        },
+      );
+    }
+  },
+  forgotPassword: async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      const result = await authService.forgotPassword(email);
+
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the fogotPassword contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  changePassword: async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          defaults.ERROR_MESSAGE,
+          { error: "token is missing from the url or invalid Token" },
+        );
+      }
+      const { newPassword } = req.body;
+
+      const result = await authService.changePassword(newPassword, token);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the change password contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
       );
     }
   },

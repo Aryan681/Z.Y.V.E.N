@@ -1,7 +1,5 @@
-import jwt from "jsonwebtoken";
 import logger from "../config/logger.js";
 import defaults from "../constants/defaults.js";
-import jwtConfig from "../config/jwt.js";
 import tokenService from "../services/token.service.js";
 import responseHelper from "../utils/response.js";
 
@@ -61,7 +59,7 @@ const authMiddleware = {
         defaults.SERVICE_UNAVAILABLE_CODE,
         defaults.SERVICE_UNAVAILABLE_MESSAGE,
         {
-          error: error.message,
+          error: "An internal server error occurred",
         },
       );
     }

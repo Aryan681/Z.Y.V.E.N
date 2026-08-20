@@ -22,5 +22,15 @@ const ratelimiter = {
     maxRequests: 2,
     expirySeconds: 60,
   }),
+  passwordResetRateLimit: rateLimitMiddleware({
+    key: "passwordReset",
+    maxRequests: 1,
+    expirySeconds: 86400,
+  }),
+  forgotPasswordRateLimit: rateLimitMiddleware({
+    key: "forgetPassword",
+    maxRequests: 2,
+    expirySeconds: 86400,
+  }),
 };
 export default ratelimiter;

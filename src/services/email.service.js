@@ -26,6 +26,29 @@ const emailService = {
             throw error;
         }
     },
+    async sendPasswordResetMail(email, passwordResetUrl) {
+        try {
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: "Reset Your Password",
+                text: `Please reset your password by visiting: ${passwordResetUrl}`,
+                html: `
+                    <h2>Reset Your Password</h2>
+                    <p>Click the button below to reset your password.</p>
+                    <a href="${passwordResetUrl}">Reset Password</a>
+                `,
+            });
+
+            logger.info(`passwordResetUrl email sent to ${email}`);
+
+            return info;
+
+        } catch (error) {
+            logger.error("Email Service Error", error);
+            throw error;
+        }
+    },
 };
 
 export default emailService ;

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema} from "../../validators/auth.validator.js";
+import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changePasswordSchema } from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -26,9 +26,9 @@ router.route("/google/link/callback").get(authController.googleLinkCallback);
 
 
 //password related routes
-// router.route("/password-reset").post(validate( passwordResetSchema),authController.passwordReset);
-// router.route("/forgot-password").post(validate( forgotPasswordSchema),authController.forgotPassword);
-// router.route("/change-password").post(validate( changePasswordSchema),authController.changePassword);
+router.route("/password-reset").post(ratelimiter.passwordResetRateLimit,authenticate,validate(passwrodResetSchema ),authController.passwordReset);
+router.route("/forgot-password").post(ratelimiter.forgotPasswordRateLimit,validate( forgotPasswordSchema),authController.forgotPassword);
+router.route("/change-password").post(ratelimiter.passwordResetRateLimit,validate(changePasswordSchema ),authController.changePassword);
 
 // logout routes 
 // router.route("/logout").post(validate(logoutSchema),authController.logout);

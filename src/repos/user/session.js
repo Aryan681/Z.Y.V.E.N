@@ -126,6 +126,24 @@ findByRefreshTokenHash: async (refreshTokenHash) => {
     throw error;
   }
 },
+  revokeAllUserSessions: async (userId) => {
+    try {
+      const query = `
+        UPDATE sessions
+        SET
+          revoked_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1
+          AND revoked_at IS NULL
+      `;
+      const values = [userId];
+      const result = await pool.query(query, values);
+      return result.rowCount;
+    } catch (error) {
+      logger.error(`Error revoking user sessions: ${error.message}`);
+      throw error;
+    }
+  },
 };
 
 export default sessionRepo;

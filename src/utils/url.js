@@ -6,6 +6,13 @@ const urlHelper = {
 
         return url.toString();
     },
+    generateResetPasswordUrl(resetToken) {
+        const url = new URL("/v1/auth/change-password", process.env.DOMAIN);
+
+        url.searchParams.set("token", resetToken);
+
+        return url.toString();
+    },
 };
 
 export default urlHelper;

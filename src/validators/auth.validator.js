@@ -18,3 +18,14 @@ export const loginSchema =z.object({
 export const refreshTokenSchema = z.object({
     refreshToken: z.string().trim({message: "Invalid refresh token"}),
 });
+
+export const passwrodResetSchema = z.object({
+    oldPassword: z.string().min(8, {message: "Password must be at least 8 characters long"}).regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"}),
+    newPassword: z.string().min(8, {message: "Password must be at least 8 characters long"}).regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"}),
+});
+export const forgotPasswordSchema = z.object({
+    email: z.string().trim().toLowerCase().email({message: "Invalid email address"}),
+});
+export const changePasswordSchema = z.object({
+    newPassword: z.string().min(8, {message: "Password must be at least 8 characters long"}).regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"}),
+});

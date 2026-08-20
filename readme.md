@@ -399,12 +399,15 @@ google:login:state:<state>
 google:link:state:<state>
 ```
 
-**Rate-limit counters**
+**Rate-limit counters & Lua Scripts**
 ```
 login:<client>
 registration:<client>
 refreshToken:<client>
+passwordReset:<client>
 ```
+* Uses **Atomic Redis Lua Scripts** (`INCR` + `EXPIRE`) via `eval()` to prevent race conditions.
+* Supports **In-Memory Fallback Strategy (`Map`)** and **Fail-Open Policy** when Redis drops.
 
 **Temporary verification/reset state (future)**
 ```
@@ -417,9 +420,9 @@ Redis data should have explicit TTLs wherever possible.
 
 ---
 
-## Rate Limiting
+## Rate Limiting & Resilience Architecture
 
-Authentication endpoints are rate-limited to reduce brute-force attacks, credential stuffing, verification-email abuse, OAuth abuse, refresh-token abuse, and automated registration.
+Authentication endpoints are rate-limited to prevent brute-force attacks, credential stuffing, email abuse, and automated bot registrations.
 
 ```js
 loginRateLimit: rateLimitMiddleware({
@@ -429,14 +432,29 @@ loginRateLimit: rateLimitMiddleware({
 });
 ```
 
-| Route | Maximum | Window |
-|---|---|---|
-| Registration | 5 | 60 sec |
-| Login | 5 | 60 sec |
-| Resend verification | 3 | 60 sec |
-| Refresh token | 2 | 60 sec |
+| Route | Maximum Requests | Window | Storage Strategy |
+|---|---|---|---|
+| Registration | 5 | 60 sec | Redis Lua / Memory Fallback |
+| Login | 5 | 60 sec | Redis Lua / Memory Fallback |
+| Resend verification | 3 | 60 sec | Redis Lua / Memory Fallback |
+| Refresh token | 2 | 60 sec | Redis Lua / Memory Fallback |
+| Password reset | 3 | 60 sec | Redis Lua / Memory Fallback |
 
-The rate limiter uses Redis counters. For high-concurrency production workloads, increment and expiration should be made atomic with a Lua script or an equivalent Redis transaction strategy.
+### High Availability & Resilience Model
+
+To prevent single points of failure, rate limiting operates in a **3-Tiered Resilient Architecture**:
+
+1. **Tier 1: Atomic Redis Lua Script (Primary)**
+   - Executes an atomic `INCR` + `EXPIRE` Lua script inside Redis via `redisClient.eval()`.
+   - Guarantees thread-safe counter increment and TTL setting in a single network roundtrip.
+
+2. **Tier 2: In-Memory Fallback Store (Secondary)**
+   - If Redis connection drops or throws a network error, rate limiting automatically fails over to a local process-level JavaScript `Map()`.
+   - Tracks request counts and expiration timestamps in Node.js RAM per server instance so rate limiting protection remains active during outages.
+
+3. **Tier 3: Fail-Open Strategy (Tertiary)**
+   - If both primary and fallback checks fail, the middleware logs the error and calls `next()`.
+   - Guarantees that infrastructure failures **never block legitimate user requests or return 500 errors**.
 
 ---
 
@@ -717,14 +735,15 @@ Services never call HTTP response helpers directly.
 - [x] Separate Google link callback
 - [x] Redis-backed link state
 
-**Phase 4 — Password security**
+**Phase 4 — Password security** 🔄
 - [ ] Forgot password
-- [ ] Password reset
-- [ ] Change password
-- [ ] Reset-token expiration
+- [x] Password reset
+- [x] Password reset hashing & validation
 - [ ] Session invalidation after sensitive password changes
 
-**Phase 5 — Session management**
+**Phase 5 — Session management** 🔄
+- [x] Session creation & device tracking
+- [x] Session storage with hashed refresh tokens
 - [ ] Logout
 - [ ] Logout all devices
 - [ ] Logout specific device
@@ -793,27 +812,28 @@ Local login → Google link → Google callback → Google linked → Google log
 
 - [ ] HTTPS everywhere
 - [ ] Strong JWT secrets
-- [ ] Secure environment configuration
-- [ ] Password hashing
-- [ ] Refresh-token hashing
-- [ ] Refresh-token rotation
-- [ ] OAuth state validation, expiration & one-time consumption
-- [ ] Unique email constraint
-- [ ] Unique Google ID constraint
-- [ ] Authentication rate limiting
-- [ ] Atomic Redis rate limiter
-- [ ] Secure cookies where used (`HttpOnly`, `Secure`, appropriate `SameSite`)
+- [x] Secure environment configuration
+- [x] Password hashing (`bcrypt`)
+- [x] Refresh-token hashing (`SHA-256`)
+- [x] Refresh-token rotation
+- [x] OAuth state validation, expiration & one-time consumption
+- [x] Unique email constraint
+- [x] Unique Google ID constraint
+- [x] Authentication rate limiting
+- [x] Atomic Redis rate limiter (Lua Scripting)
+- [x] In-Memory fallback & Fail-Open resilience strategy
+- [x] Secure cookies where used (`HttpOnly`, `SameSite=Lax`)
 - [ ] CORS restrictions
-- [ ] JWT issuer / audience / algorithm validation
-- [ ] Token-type validation
-- [ ] No token/password logging
+- [x] JWT issuer / audience / algorithm validation
+- [x] Token-type validation
+- [x] No token/password logging (Pino Redaction)
 - [ ] Google client secrets protected
-- [ ] Redis authentication/TLS where required
-- [ ] PostgreSQL connection pooling
-- [ ] Database indexes
-- [ ] Centralized error handling
+- [x] Redis authentication/TLS where required (Configured in redis.js)
+- [x] PostgreSQL connection pooling
+- [x] Database indexes (PKs, UNIQUE constraints & explicit B-Tree indexes)
+- [x] Centralized error handling
 - [ ] Monitoring & metrics
-- [ ] Automated tests
+- [x] Automated unit & integration tests
 - [ ] Backup/recovery strategy
 
 ---

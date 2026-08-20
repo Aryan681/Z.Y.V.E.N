@@ -175,6 +175,52 @@ const userRepo = {
       throw error;
     }
   },
+  updatePassword: async (userId, hashedPassword) => {
+    try {
+      const query =`
+      Update users 
+      set password = $1
+      where id =$2
+       RETURNING id
+      `
+      const values = [hashedPassword,userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error occur in  the password update userrepo ${error}`);
+      throw error;
+    }
+  },
+  updateResetToken: async (userId, resetToken, tokenExpire) => {
+    const query = `
+        UPDATE users
+        SET
+            reset_token = $1,
+            reset_token_expires = $2,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id
+    `;
 
+    const values = [resetToken, tokenExpire, userId];
+
+    const result = await pool.query(query, values);
+
+    return result.rows[0];
+  },
+  findUserByResetToken: async (token) => {
+    const query = `
+        SELECT
+            id,
+            email,
+            is_verified,
+            reset_token_expires
+        FROM users
+        WHERE reset_token = $1
+    `;
+    const values = [token];
+    const result = await pool.query(query, values);
+    return result.rows[0] || null;
+  },
 };
 export default userRepo;
