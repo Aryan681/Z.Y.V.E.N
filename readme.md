@@ -1,4 +1,4 @@
-# 🛡️ ZYVEN: Zero-trust Identity & Verification Engine(IAM Engine)
+# 🛡️  Z.Y.V.E.N : Zero-trust Identity & Verification Engine(IAM Engine)
 
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
@@ -36,7 +36,7 @@ A modular, enterprise-grade **Identity & Access Management (IAM) Engine** and Au
 Sentinel IAM operates as a centralized identity engine that normalizes authentication across different identity providers into a single, unified application session:
 
 ```
-                            SENTINEL IAM ENGINE
+                            ZYVEN IAM ENGINE
                                      │
          ┌───────────────────────────┼───────────────────────────┐
          ▼                           ▼                           ▼
@@ -86,7 +86,7 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 
 ### 1. Refresh Token Reuse Detection & Automated Breach Invalidation
 When an attacker steals an old refresh token and attempts to replay it:
-1. Sentinel decodes the token's signed `sid` (Session ID) and `sub` (User ID).
+1. ZYVEN decodes the token's signed `sid` (Session ID) and `sub` (User ID).
 2. It fetches the session from PostgreSQL and compares the active `refresh_token_hash` against the incoming token hash.
 3. If mismatched, it recognizes a token replay attack, **instantly kills all active sessions across all devices for that user**, and sends an emergency breach notification email.
 
@@ -122,7 +122,7 @@ Prevents account takeovers (ATO) during primary email modifications:
 sequenceDiagram
     autonumber
     actor User
-    participant API as Sentinel IAM
+    participant API as ZYVEN IAM
     participant Redis
     participant Mail as Email Service
     participant DB as Postgres DB
@@ -163,7 +163,7 @@ sequenceDiagram
 Sentinel IAM is engineered to be used in two modes:
 
 ### Mode 1: Centralized Auth Microservice (Recommended)
-Run Sentinel IAM on a dedicated domain (e.g., `https://auth.yourdomain.com`).
+Run ZYVEN IAM on a dedicated domain (e.g., `https://auth.yourdomain.com`).
 - Other internal microservices (E-commerce, Billing, Dashboard) verify the user's JWT without touching the authentication database.
 
 ### Mode 2: Modular Express Engine
