@@ -34,20 +34,36 @@ router.route("/reset-password").post(ratelimiter.passwordResetRateLimit,validate
 router.route("/change-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailSchema ),authController.emailChange);
 router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
 
-// logout routes 
-// router.route("/logout").post(validate(logoutSchema),authController.logout);
-// router.route("/logout/allDevices").post(validate(logoutSchema),authController.logoutAllDevices);
-// router.route("/logout/specificDevice").post(validate(logoutSchema),authController.logoutSpecificDevice);
-// router.route("/all-sessions").get(authController.allSessions);
+// logout & session management routes 
+// router.route("/logout").post(authenticate.verifyToken, authController.logout);
+// router.route("/logout/all-devices").post(authenticate.verifyToken, authController.logoutAllDevices);
+// router.route("/logout/device/:sessionId").post(authenticate.verifyToken, authController.logoutSpecificDevice);
+// router.route("/sessions").get(authenticate.verifyToken, authController.allSessions);
+// router.route("/me").get(authenticate.verifyToken, authController.getMe);
 
-//custom register routes
-// router.route("/invite-register").post(validate(inviteRegisterSchema),authController.inviteRegister);
+// 2FA / TOTP (Authenticator App) routes
+// router.route("/two-fa/setup").post(authenticate.verifyToken, authController.twofaSetup);
+// router.route("/two-fa/enable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.twofaEnable);
+// router.route("/two-fa/verify").post(validate(twofaLoginVerifySchema), authController.twofaVerify);
+// router.route("/two-fa/disable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.twofaDisable);
+// router.route("/two-fa/recovery-codes/generate").post(authenticate.verifyToken, authController.generateRecoveryCodes);
+// router.route("/two-fa/recovery-codes/verify").post(validate(twofaRecoverySchema), authController.twofaRecoveryVerify);
 
-//2fa related routes
-//  router.route("/two-fa/setup").post( authController.twofaSetup);
-// router.route("/two-fa/enable").post( validate(twofaOtpSchema), authController.twofaEnable);
-// router.route("/two-fa/verify").post( validate(twofaOtpSchema), authController.twofaVerify);
-// router.route("/two-fa/resend").post( authController.twofaResend);
-// router.route("/two-fa/disable").post( validate(twofaOtpSchema), authController.twofaDisable);
+// Magic Link (Passwordless Email) routes
+// router.route("/passwordless/send-link").post(ratelimiter.forgotPasswordRateLimit, validate(passwordlessSchema), authController.sendMagicLink);
+// router.route("/passwordless/verify").get(authController.verifyMagicLink);
+
+// Passkeys / WebAuthn (Biometrics & FIDO2) routes
+// router.route("/passkey/register/options").post(authenticate.verifyToken, authController.passkeyRegisterOptions);
+// router.route("/passkey/register/verify").post(authenticate.verifyToken, authController.passkeyRegisterVerify);
+// router.route("/passkey/login/options").post(authController.passkeyLoginOptions);
+// router.route("/passkey/login/verify").post(authController.passkeyLoginVerify);
+
+// Team / Workspace invitation routes
+// router.route("/invite").post(authenticate.verifyToken, validate(inviteUserSchema), authController.inviteUser);
+// router.route("/invite-register").post(validate(inviteRegisterSchema), authController.inviteRegister);
+
+// Account deletion & lifecycle routes
+// router.route("/account").delete(authenticate.verifyToken, validate(deleteAccountSchema), authController.deleteAccount);
 
 export default router;
