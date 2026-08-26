@@ -144,6 +144,32 @@ findByRefreshTokenHash: async (refreshTokenHash) => {
       throw error;
     }
   },
+  findBySessionId: async (sessionId) => {
+    try {
+      const query = `
+        SELECT
+          session_id,
+          user_id,
+          refresh_token_hash,
+          device_id,
+          device_name,
+          ip_address,
+          user_agent,
+          last_active,
+          revoked_at,
+          expires_at
+        FROM sessions
+        WHERE session_id = $1
+        LIMIT 1
+      `;
+      const values = [sessionId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error finding session by sessionId: ${error.message}`);
+      throw error;
+    }
+  },
 };
 
 export default sessionRepo;

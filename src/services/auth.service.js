@@ -180,7 +180,7 @@ const authService = {
         logger.warn(`user not found with email ${email}`);
         return {
           success: false,
-          message: "user not found",
+          message: "Invalid email or password",
         };
       }
       if (!user.is_verified) {
@@ -198,7 +198,7 @@ const authService = {
         logger.warn(`password not match with the user ${email}`);
         return {
           success: false,
-          message: "password not match",
+          message: "Invalid email or password",
         };
       }
 
@@ -215,50 +215,68 @@ const authService = {
   },
   rotateRefreshToken: async (refreshToken) => {
     try {
-      // 1. Verify the refresh JWT
+      // 1. Verify the refresh JWT cryptographically
       const decoded = tokenService.verifyRefreshToken(refreshToken);
+      const incomingTokenHash = tokenHelper.hashToken(refreshToken);
 
-      // 2. Hash the incoming refresh token
-      const refreshTokenHash = tokenHelper.hashToken(refreshToken);
+      // 2. Fetch the session directly by decoded.sid
+      const session = await sessionRepo.findBySessionId(decoded.sid);
 
-      // 3. Find the active session
-      const session =
-        await sessionRepo.findByRefreshTokenHash(refreshTokenHash);
-
-      if (!session) {
-        logger.warn("Invalid refresh token or refresh token reuse detected");
-
+      // Case A: Session does not exist or was explicitly revoked
+      if (
+        !session ||
+        session.revoked_at ||
+        new Date() > new Date(session.expires_at)
+      ) {
         return {
           success: false,
-          message: "Invalid refresh token",
+          message: "Session expired or invalid",
         };
       }
 
-      // 4. Make sure the token belongs to this session
-      if (decoded.sid !== session.session_id) {
-        logger.warn("Refresh token session mismatch");
+      // Case B: 🚨 REUSE DETECTION
+      // The session exists, but the incoming token is NOT the current active token!
+      if (session.refresh_token_hash !== incomingTokenHash) {
+        logger.warn(
+          `🚨 REFRESH TOKEN REUSE DETECTED for user ${decoded.sub} on session ${decoded.sid}`,
+        );
+
+        // 1. Terminate all active sessions for this compromised account
+        await sessionRepo.revokeAllUserSessions(decoded.sub);
+
+        // 2. Fetch user to send alert email
+        const user = await userRepo.findUserById(decoded.sub);
+        if (user) {
+          try {
+            await emailService.sendSecurityAlertMail(
+              user.email,
+              "Security Alert: Suspicious Session Activity Detected",
+              "We detected an attempt to use an outdated session token on your account. As a precaution, all your active sessions have been terminated. If this was not you, please log in and change your password immediately.",
+            );
+          } catch (mailErr) {
+            logger.error(`Failed to send breach notification: ${mailErr}`);
+          }
+        }
 
         return {
           success: false,
-          message: "Invalid refresh token",
+          message:
+            "Suspicious activity detected. All active sessions have been terminated for security.",
         };
       }
 
-      // 5. Generate a NEW refresh token
+      // Case C: Normal Rotation (Token matches current session)
       const newRefreshToken = tokenService.generateRefreshToken(
         { id: session.user_id },
         session.session_id,
       );
+      const newAccessToken = tokenService.generateAccessToken({
+        id: session.user_id,
+      });
 
-      logger.info(`New refresh token generated`);
-
-      // 6. Hash the NEW refresh token
       const newRefreshTokenHash = tokenHelper.hashToken(newRefreshToken);
-
-      // 7. Set the new refresh-token expiry
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      // 8. Replace the old refresh-token hash
       const updatedSession = await sessionRepo.updateRefreshToken(
         session.session_id,
         newRefreshTokenHash,
@@ -274,15 +292,9 @@ const authService = {
         };
       }
 
-      // 9. Generate a NEW access token
-      const accessToken = tokenService.generateAccessToken({
-        id: session.user_id,
-      });
-
-      // 10. Return new credentials
       return {
         success: true,
-        accessToken: `Bearer ${accessToken}`,
+        accessToken: `Bearer ${newAccessToken}`,
         refreshToken: newRefreshToken,
       };
     } catch (error) {
@@ -298,7 +310,7 @@ const authService = {
         logger.warn(`User not found with the user id ${userId}`);
         return {
           success: false,
-          message: "User not found",
+          message: "Invalid email or password",
         };
       }
       const passwordMatch = await passwordHelper.verifyPassword(
@@ -309,7 +321,7 @@ const authService = {
         logger.warn(`Password not match with the user ${user.email}`);
         return {
           success: false,
-          message: "Password not match",
+          message: "Invalid email or password",
         };
       }
       const hashedPassword = await passwordHelper.hashPassword(newPasswrod);
@@ -476,20 +488,35 @@ const authService = {
           message: "Email change request expired or not found",
         };
       }
-      const emailChangeDataJson = JSON.parse(emailChangeData);
 
+      const data = JSON.parse(emailChangeData);
+      
       const inputOldHash = tokenHelper.hashToken(old_code);
       const inputNewHash = tokenHelper.hashToken(new_code);
 
+      if (data.attempts >= 3) {
+        await redisService.del(key);
+        return {
+          success: false,
+          message: "Too many failed attempts. Please request a new code.",
+        };
+      }
+
       if (
-        inputOldHash !== emailChangeDataJson.oldCodeHash ||
-        inputNewHash !== emailChangeDataJson.newCodeHash
+        inputOldHash !== data.oldCodeHash ||
+        inputNewHash !== data.newCodeHash
       ) {
-        return { success: false, message: "Invalid verification code" };
+        data.attempts += 1;
+        // Re-save with remaining TTL
+        await redisService.setWithExpiry(key, JSON.stringify(data), 600);
+        return {
+          success: false,
+          message: `Invalid code. ${3 - data.attempts} attempts remaining.`,
+        };
       }
 
       const emailExists = await userRepo.findUserByEmail(
-        emailChangeDataJson.newEmail,
+       data.newEmail,
       );
       if (emailExists && emailExists.id !== userId) {
         await redisService.del(key);
@@ -502,8 +529,8 @@ const authService = {
       // Notify the old email address about the change before updating
       try {
         await emailService.sendEmailChangeNotification(
-          emailChangeDataJson.currentEmail,
-          emailChangeDataJson.newEmail,
+         data.currentEmail,
+         data.newEmail,
         );
       } catch (notifyErr) {
         logger.error(
@@ -513,7 +540,7 @@ const authService = {
 
       const updatedEmail = await userRepo.updateEmail(
         userId,
-        emailChangeDataJson.newEmail,
+       data.newEmail,
       );
       if (!updatedEmail) {
         logger.error("Failed to update user email");

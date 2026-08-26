@@ -431,7 +431,7 @@ const googleService = {
 
         return {
           success: false,
-          message: "User not found",
+          message: "Invalid email or password",
         };
       }
 

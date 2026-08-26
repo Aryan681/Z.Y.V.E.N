@@ -26,13 +26,13 @@ router.route("/google/link/callback").get(authController.googleLinkCallback);
 
 
 //password related routes
-router.route("/password-reset").post(ratelimiter.passwordResetRateLimit,authenticate,validate(passwrodResetSchema ),authController.passwordReset);
+router.route("/password-reset").post(ratelimiter.passwordResetRateLimit,authenticate.verifyToken,validate(passwrodResetSchema ),authController.passwordReset);
 router.route("/forgot-password").post(ratelimiter.forgotPasswordRateLimit,validate( forgotPasswordSchema),authController.forgotPassword);
 router.route("/reset-password").post(ratelimiter.passwordResetRateLimit,validate(changePasswordSchema ),authController.changePassword);
 
 //email related routes
-router.route("/change-email").post(ratelimiter.changeEmailRateLimit,authenticate,validate(changeEmailSchema ),authController.emailChange);
-router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit,authenticate,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
+router.route("/change-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailSchema ),authController.emailChange);
+router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
 
 // logout routes 
 // router.route("/logout").post(validate(logoutSchema),authController.logout);
@@ -41,13 +41,13 @@ router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit
 // router.route("/all-sessions").get(authController.allSessions);
 
 //custom register routes
-// router.route("/invite-register").post(validate(inviteRegisterSchema)authController.inviteRegister);
+// router.route("/invite-register").post(validate(inviteRegisterSchema),authController.inviteRegister);
 
 //2fa related routes
-// router.post("/two-fa/setup").post( authController.twofaSetup);
-// router.post("/two-fa/enable").post( validate(twofaOtpSchema), authController.twofaEnable);
-// router.post("/two-fa/verify").post( validate(twofaOtpSchema), authController.twofaVerify);
-// router.post("/two-fa/resend").post( authController.twofaResend);
-// router.delete("/two-fa/disable").post( validate(twofaOtpSchema), authController.twofaDisable);
+//  router.route("/two-fa/setup").post( authController.twofaSetup);
+// router.route("/two-fa/enable").post( validate(twofaOtpSchema), authController.twofaEnable);
+// router.route("/two-fa/verify").post( validate(twofaOtpSchema), authController.twofaVerify);
+// router.route("/two-fa/resend").post( authController.twofaResend);
+// router.route("/two-fa/disable").post( validate(twofaOtpSchema), authController.twofaDisable);
 
 export default router;

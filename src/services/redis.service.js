@@ -114,6 +114,17 @@ const redisService = {
       throw error;
     }
   },
+  increasField: async (key, field) => {
+  try {
+    // hincrby increments a specific field inside a Redis Hash by 1
+    const value = await redisClient.hIncrBy(key, field, 1);
+    logger.info(`Redis increase hash key ${key} field ${field} successfully`);
+    return value;
+  } catch (error) {
+    logger.error(`Redis increase hash key ${key} field ${field} error ${error}`);
+    throw error;
+  }
+},
 };
 
 export default redisService;

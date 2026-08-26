@@ -97,10 +97,31 @@ const emailService = {
 
             logger.info(`Email change success notification sent to ${oldEmail}`);
 
+        } catch (error) {
+            logger.error("Email Service Notification Error", error);
+            throw error;
+        }
+    },
+    async sendSecurityAlertMail(email, subject, message) {
+        try {
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: subject,
+                text: message,
+                html: `
+                    <h2>${subject}</h2>
+                    <p>${message}</p>
+                    <p><b>Recommended Action:</b> Please log in to your account and reset your password immediately if you did not initiate this action.</p>
+                `,
+            });
+
+            logger.info(`Security alert email sent to ${email}`);
+
             return info;
 
         } catch (error) {
-            logger.error("Email Service Notification Error", error);
+            logger.error("Email Security Alert Error", error);
             throw error;
         }
     },
