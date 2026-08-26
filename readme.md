@@ -1,4 +1,4 @@
-# 🛡️ Sentinel IAM: Plug-and-Play Identity & Access Management Engine
+# 🛡️ ZYVEN: Zero-trust Identity & Verification Engine(IAM Engine)
 
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
