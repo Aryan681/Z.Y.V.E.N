@@ -491,6 +491,67 @@ const authController = {
       );
     }
   },
+  emailChange: async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      const result = await authService.changeEmail(email,req.user.sub);
+
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    }catch (error) {
+      logger.error(`error Occure in the change email contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  emailChangeVerify: async (req, res) => {
+    try{
+      const { old_code, new_code } = req.body;
+      const restult  = await authService.changeEmailVerify(old_code,new_code,req.user.sub);
+      if (!restult.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          restult.message,
+          { error: restult.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: restult },
+      );
+
+    }catch (error) {
+      logger.error(`error Occure in the change email contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.INTERNAL_SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+
 };
 
 export default authController;

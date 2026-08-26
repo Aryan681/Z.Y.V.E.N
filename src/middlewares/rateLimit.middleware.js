@@ -32,5 +32,10 @@ const ratelimiter = {
     maxRequests: 2,
     expirySeconds: 86400,
   }),
+  changeEmailRateLimit: rateLimitMiddleware({
+    key: "emailChange",
+    maxRequests: 2,
+    expirySeconds: 86400,
+  }),
 };
 export default ratelimiter;

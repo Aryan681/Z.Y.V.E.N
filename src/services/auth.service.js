@@ -8,6 +8,7 @@ import tokenService from "../services/token.service.js";
 import sessionRepo from "../repos/user/session.js";
 import { UAParser } from "ua-parser-js";
 import crypto from "crypto";
+import redisService from "../services/redis.service.js";
 const authService = {
   registration: async (name, email, password) => {
     try {
@@ -118,40 +119,30 @@ const authService = {
     }
   },
   createAuthenticatedSession: async (user, sessionContext) => {
-  try {
-    // 1. Generate session ID
-    const sessionId = crypto.randomUUID();
+    try {
+      // 1. Generate session ID
+      const sessionId = crypto.randomUUID();
 
-    // 2. Generate your application JWTs
-    const accessToken = tokenService.generateAccessToken(user);
+      // 2. Generate your application JWTs
+      const accessToken = tokenService.generateAccessToken(user);
 
-    const refreshToken = tokenService.generateRefreshToken(
-      user,
-      sessionId,
-    );
+      const refreshToken = tokenService.generateRefreshToken(user, sessionId);
 
-    // 3. Hash refresh token before storing it
-    const hashedRefreshToken =
-      tokenHelper.hashToken(refreshToken);
+      // 3. Hash refresh token before storing it
+      const hashedRefreshToken = tokenHelper.hashToken(refreshToken);
 
-    // 4. Parse device information
-    const parser = new UAParser(
-      sessionContext.userAgent,
-    );
+      // 4. Parse device information
+      const parser = new UAParser(sessionContext.userAgent);
 
-    const parsedDevice = parser.getResult();
+      const parsedDevice = parser.getResult();
 
-    const deviceName =
-      [
-        parsedDevice.browser.name,
-        parsedDevice.os.name,
-      ]
-        .filter(Boolean)
-        .join(" on ") || "unknown";
+      const deviceName =
+        [parsedDevice.browser.name, parsedDevice.os.name]
+          .filter(Boolean)
+          .join(" on ") || "unknown";
 
-    // 5. Create session
-    const createSession =
-      await sessionRepo.createSession({
+      // 5. Create session
+      const createSession = await sessionRepo.createSession({
         sessionId,
         userId: user.id,
         refreshTokenHash: hashedRefreshToken,
@@ -159,33 +150,28 @@ const authService = {
         deviceName,
         ipAddress: sessionContext.ipAddress,
         userAgent: sessionContext.userAgent,
-        expiresAt: new Date(
-          Date.now() + 7 * 24 * 60 * 60 * 1000,
-        ),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-    if (!createSession) {
+      if (!createSession) {
+        return {
+          success: false,
+          message: "Error creating user session",
+        };
+      }
+
       return {
-        success: false,
-        message: "Error creating user session",
+        success: true,
+        user,
+        accessToken: `Bearer ${accessToken}`,
+        refreshToken,
+        session: createSession,
       };
+    } catch (error) {
+      logger.error({ error }, "Create authenticated session error");
+
+      throw error;
     }
-
-    return {
-      success: true,
-      user,
-      accessToken: `Bearer ${accessToken}`,
-      refreshToken,
-      session: createSession,
-    };
-  } catch (error) {
-    logger.error(
-      { error },
-      "Create authenticated session error",
-    );
-
-    throw error;
-  }
   },
   login: async (email, password, sessionContext) => {
     try {
@@ -215,14 +201,13 @@ const authService = {
           message: "password not match",
         };
       }
-    
 
       // Everything after authentication is shared
-    const result =await authService.createAuthenticatedSession(
-      user,
-      sessionContext,
-    );
-      return result
+      const result = await authService.createAuthenticatedSession(
+        user,
+        sessionContext,
+      );
+      return result;
     } catch (error) {
       logger.error(`verify password service  ${error}`);
       throw error;
@@ -297,7 +282,7 @@ const authService = {
       // 10. Return new credentials
       return {
         success: true,
-        accessToken:`Bearer ${accessToken}`,
+        accessToken: `Bearer ${accessToken}`,
         refreshToken: newRefreshToken,
       };
     } catch (error) {
@@ -328,10 +313,7 @@ const authService = {
         };
       }
       const hashedPassword = await passwordHelper.hashPassword(newPasswrod);
-      const updatedUser = await userRepo.updatePassword(
-        userId,
-        hashedPassword,
-      );
+      const updatedUser = await userRepo.updatePassword(userId, hashedPassword);
       if (!updatedUser) {
         logger.error("Failed to update user password");
 
@@ -364,8 +346,7 @@ const authService = {
       const resetToken = tokenHelper.generateVerificationToken();
       const tokenExpire = new Date(Date.now() + 10 * 60 * 1000);
       await userRepo.updateResetToken(user.id, resetToken, tokenExpire);
-      const generatedUrl =
-        urlHelper.generateResetPasswordUrl(resetToken);
+      const generatedUrl = urlHelper.generateResetPasswordUrl(resetToken);
       await emailService.sendPasswordResetMail(email, generatedUrl);
       logger.info(`Reset password link sent successfully: ${email}`);
       return {
@@ -414,6 +395,142 @@ const authService = {
       };
     } catch (error) {
       logger.error(`Error occur in the change password service${error} `);
+      throw error;
+    }
+  },
+  changeEmail: async (email, userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        logger.warn(`User not found with the user id ${userId}`);
+        return {
+          success: false,
+          message: "If an account exists , a email reset link has been sent",
+        };
+      }
+      if (user.email === email) {
+        return {
+          success: false,
+          message: "New email must be different from current email",
+        };
+      }
+      const emailExists = await userRepo.findUserByEmail(email);
+      if (emailExists) {
+        return {
+          success: false,
+          message: "Email already exists",
+        };
+      }
+      const verificationCode = tokenHelper.generateVerificationCode();
+      const hashedCode = tokenHelper.hashToken(verificationCode);
+
+      const oldEmailVefificationCode = tokenHelper.generateVerificationCode();
+      const oldEmailHashedCode = tokenHelper.hashToken(
+        oldEmailVefificationCode,
+      );
+
+      const key = `email:change:${user.id}`;
+      const emailChangeData = JSON.stringify({
+        currentEmail: user.email,
+        newEmail: email,
+        newCodeHash: hashedCode,
+        oldCodeHash: oldEmailHashedCode,
+        attempts: 0,
+      });
+      await redisService.setWithExpiry(key, emailChangeData, 600);
+      const newMailVerification = await emailService.sendEmailChangeMail(
+        email,
+        verificationCode,
+        true,
+      );
+      const oldMailVerification = await emailService.sendEmailChangeMail(
+        user.email,
+        oldEmailVefificationCode,
+        false,
+      );
+
+      if (!newMailVerification || !oldMailVerification) {
+        logger.warn(`Email change failed for email: ${email}`);
+        await redisService.del(key);
+        return {
+          success: false,
+          message: "Email change failed",
+        };
+      }
+      return {
+        success: true,
+        message: "verification code sent successfully",
+      };
+    } catch (error) {
+      logger.error(`Error occur in the change email service${error} `);
+      throw error;
+    }
+  },
+  changeEmailVerify: async (old_code, new_code, userId) => {
+    try {
+      const key = `email:change:${userId}`;
+      const emailChangeData = await redisService.get(key);
+      if (!emailChangeData) {
+        return {
+          success: false,
+          message: "Email change request expired or not found",
+        };
+      }
+      const emailChangeDataJson = JSON.parse(emailChangeData);
+
+      const inputOldHash = tokenHelper.hashToken(old_code);
+      const inputNewHash = tokenHelper.hashToken(new_code);
+
+      if (
+        inputOldHash !== emailChangeDataJson.oldCodeHash ||
+        inputNewHash !== emailChangeDataJson.newCodeHash
+      ) {
+        return { success: false, message: "Invalid verification code" };
+      }
+
+      const emailExists = await userRepo.findUserByEmail(
+        emailChangeDataJson.newEmail,
+      );
+      if (emailExists && emailExists.id !== userId) {
+        await redisService.del(key);
+        return {
+          success: false,
+          message: "Email already taken by another account",
+        };
+      }
+
+      // Notify the old email address about the change before updating
+      try {
+        await emailService.sendEmailChangeNotification(
+          emailChangeDataJson.currentEmail,
+          emailChangeDataJson.newEmail,
+        );
+      } catch (notifyErr) {
+        logger.error(
+          `Failed to send email change notification to old email: ${notifyErr}`,
+        );
+      }
+
+      const updatedEmail = await userRepo.updateEmail(
+        userId,
+        emailChangeDataJson.newEmail,
+      );
+      if (!updatedEmail) {
+        logger.error("Failed to update user email");
+
+        return {
+          success: false,
+          message: "Unable to update user email",
+        };
+      }
+      await sessionRepo.revokeAllUserSessions(userId);
+      await redisService.del(key);
+      return {
+        success: true,
+        message: "Email updated successfully",
+      };
+    } catch (error) {
+      logger.error(`Error occur in the change email verify service${error} `);
       throw error;
     }
   },

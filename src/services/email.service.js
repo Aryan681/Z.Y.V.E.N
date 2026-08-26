@@ -49,6 +49,61 @@ const emailService = {
             throw error;
         }
     },
+    async sendEmailChangeMail(email, verificationCode, isNewEmail = false) {
+        try {
+            const subject = isNewEmail
+                ? "Confirm Your New Email Address"
+                : "Authorize Email Change Request";
+            const message = isNewEmail
+                ? `You requested to set this email as your new account email. Your verification code is: ${verificationCode}`
+                : `A request was received to change your account email. Your authorization code is: ${verificationCode}`;
+
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: subject,
+                text: message,
+                html: `
+                    <h2>${subject}</h2>
+                    <p>${message}</p>
+                    <p><b>Verification Code:</b> ${verificationCode}</p>
+                    <p>This code will expire in 10 minutes. If you did not make this request, please secure your account immediately.</p>
+                `,
+            });
+
+            logger.info(`Email change verification code sent to ${email}`);
+
+            return info;
+
+        } catch (error) {
+            logger.error("Email Service Error", error);
+            throw error;
+        }
+    },
+    async sendEmailChangeNotification(oldEmail, newEmail) {
+        try {
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: oldEmail,
+                subject: "Security Alert: Your Account Email Has Been Changed",
+                text: `Your account email address has been successfully changed to ${newEmail}. If you did not authorize this change, please contact support immediately.`,
+                html: `
+                    <h2>Email Changed Successfully</h2>
+                    <p>Your account email address has been successfully changed to: <b>${newEmail}</b>.</p>
+                    <p>All active sessions have been logged out as a security measure.</p>
+                    <p><b>If you did not make this change:</b> Please contact our support team immediately.</p>
+                `,
+            });
+
+            logger.info(`Email change success notification sent to ${oldEmail}`);
+
+            return info;
+
+        } catch (error) {
+            logger.error("Email Service Notification Error", error);
+            throw error;
+        }
+    },
 };
 
-export default emailService ;
+export default emailService;

@@ -29,3 +29,10 @@ export const forgotPasswordSchema = z.object({
 export const changePasswordSchema = z.object({
     newPassword: z.string().min(8, {message: "Password must be at least 8 characters long"}).regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"}),
 });
+export const changeEmailSchema = z.object({
+    email: z.string().trim().toLowerCase().email({message: "Invalid email address"}),
+});
+export const changeEmailVerifySchema = z.object({
+    old_code: z.string().trim().min(1, {message: "Old email verification code is required"}),
+    new_code: z.string().trim().min(1, {message: "New email verification code is required"}),
+});

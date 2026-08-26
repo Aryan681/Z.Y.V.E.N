@@ -222,5 +222,22 @@ const userRepo = {
     const result = await pool.query(query, values);
     return result.rows[0] || null;
   },
+  updateEmail: async (userId, email) => {
+    try {
+      const query = `
+        UPDATE users
+        SET email = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id, name, email
+      `;
+      const values = [email, userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error in updateEmail userRepo: ${error}`);
+      throw error;
+    }
+  },
 };
 export default userRepo;

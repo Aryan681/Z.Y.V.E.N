@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changePasswordSchema } from "../../validators/auth.validator.js";
+import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -28,17 +28,17 @@ router.route("/google/link/callback").get(authController.googleLinkCallback);
 //password related routes
 router.route("/password-reset").post(ratelimiter.passwordResetRateLimit,authenticate,validate(passwrodResetSchema ),authController.passwordReset);
 router.route("/forgot-password").post(ratelimiter.forgotPasswordRateLimit,validate( forgotPasswordSchema),authController.forgotPassword);
-router.route("/change-password").post(ratelimiter.passwordResetRateLimit,validate(changePasswordSchema ),authController.changePassword);
+router.route("/reset-password").post(ratelimiter.passwordResetRateLimit,validate(changePasswordSchema ),authController.changePassword);
+
+//email related routes
+router.route("/change-email").post(ratelimiter.changeEmailRateLimit,authenticate,validate(changeEmailSchema ),authController.emailChange);
+router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit,authenticate,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
 
 // logout routes 
 // router.route("/logout").post(validate(logoutSchema),authController.logout);
 // router.route("/logout/allDevices").post(validate(logoutSchema),authController.logoutAllDevices);
 // router.route("/logout/specificDevice").post(validate(logoutSchema),authController.logoutSpecificDevice);
 // router.route("/all-sessions").get(authController.allSessions);
-
-
-//email related routes
-// router.route("/change-email").post(authController.emailChange);
 
 //custom register routes
 // router.route("/invite-register").post(validate(inviteRegisterSchema)authController.inviteRegister);
