@@ -34,8 +34,18 @@ const ratelimiter = {
   }),
   changeEmailRateLimit: rateLimitMiddleware({
     key: "emailChange",
-    maxRequests: 2,
+    maxRequests: 5,
     expirySeconds: 86400,
   }),
+  sessionsRateLimit: rateLimitMiddleware({
+    key: "sessions",
+    maxRequests: 5,
+    expirySeconds: 60,
+  }),
+  // userProfileRateLimit: rateLimitMiddleware({
+  //   key: "userProfile",
+  //   maxRequests: 10,
+  //   expirySeconds: 60,
+  // }),
 };
 export default ratelimiter;

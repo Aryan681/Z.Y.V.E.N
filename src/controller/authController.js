@@ -551,6 +551,92 @@ const authController = {
       );
     }
   },
+  logout: async (req, res) => {
+    try{
+      const userId = req.user.sub;
+      const {scope ,  session_id,current_session_id } = req.body;
+       const result = await authService.logout(userId,scope,session_id, current_session_id);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      )
+
+    } catch (error) {
+      logger.error(`error Occure in the logout contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  allSessions: async (req, res) => {
+    try{
+      const userId = req.user.sub;
+      const result = await authService.allSessions(userId);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the allSessions contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  // getMe: async (req, res) => {
+  //   try {
+  //     const userId = req.user.sub;
+  //     const result = await userService.getMe(userId);
+  //     if (!result.success) {
+  //       return responseHelper.customResponse(
+  //         res,
+  //         defaults.BAD_REQUEST_CODE,
+  //         result.message,
+  //         { error: result.message },
+  //       );
+  //     }
+  //     return responseHelper.customResponse(
+  //       res,
+  //       defaults.OK_CODE,
+  //       defaults.SUCCESS_MESSAGE,
+  //       { message: result },
+  //     );
+  //   } catch (error) {
+  //     logger.error(`error Occure in the getMe contorller${error}`);
+  //     return responseHelper.customResponse(
+  //       res,
+  //       defaults.INTERNAL_SERVER_ERROR_CODE,
+  //       defaults.SERVER_ERROR_MESSAGE,
+  //       { error: "An internal server error occurred" },
+  //     );
+  //   }
+  // },  
 
 };
 

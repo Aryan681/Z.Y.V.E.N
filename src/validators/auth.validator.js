@@ -36,3 +36,8 @@ export const changeEmailVerifySchema = z.object({
     old_code: z.string().trim().min(1, {message: "Old email verification code is required"}),
     new_code: z.string().trim().min(1, {message: "New email verification code is required"}),
 });
+export const logoutSchema  = z.object({
+    scope: z.string().min(1, {message: "Scope is required"}),
+    session_id: z.string().uuid("Invalid session ID"),
+    current_session_id: z.string().uuid("Invalid current session ID"),
+})

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
+import {logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -32,14 +32,12 @@ router.route("/reset-password").post(ratelimiter.passwordResetRateLimit,validate
 
 //email related routes
 router.route("/change-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailSchema ),authController.emailChange);
-router.route("/change-email/verify-email").post(ratelimiter.changeEmailRateLimit,authenticate.verifyToken,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
+router.route("/change-email/verify").post(authenticate.verifyToken,validate(changeEmailVerifySchema ),authController.emailChangeVerify);
 
 // logout & session management routes 
-// router.route("/logout").post(authenticate.verifyToken, authController.logout);
-// router.route("/logout/all-devices").post(authenticate.verifyToken, authController.logoutAllDevices);
-// router.route("/logout/device/:sessionId").post(authenticate.verifyToken, authController.logoutSpecificDevice);
-// router.route("/sessions").get(authenticate.verifyToken, authController.allSessions);
-// router.route("/me").get(authenticate.verifyToken, authController.getMe);
+router.route("/logout").post(validate(logoutSchema), authenticate.verifyToken, authController.logout);
+router.route("/sessions").get(ratelimiter.sessionsRateLimit,authenticate.verifyToken, authController.allSessions);
+// router.route("/me").get(ratelimiter.userProfileRateLimit,authenticate.verifyToken, authController.getMe);
 
 // 2FA / TOTP (Authenticator App) routes
 // router.route("/two-fa/setup").post(authenticate.verifyToken, authController.twofaSetup);

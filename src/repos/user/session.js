@@ -91,41 +91,41 @@ const sessionRepo = {
 
     return result.rows[0];
   },
-findByRefreshTokenHash: async (refreshTokenHash) => {
-  try {
-    const query = `
-      SELECT
-        session_id,
-        user_id,
-        device_id,
-        device_name,
-        ip_address,
-        user_agent,
-        last_active,
-        revoked_at,
-        expires_at,
-        created_at
-      FROM sessions
-      WHERE refresh_token_hash = $1
-        AND revoked_at IS NULL
-        AND expires_at > CURRENT_TIMESTAMP
-      LIMIT 1
-    `;
+  findByRefreshTokenHash: async (refreshTokenHash) => {
+    try {
+      const query = `
+        SELECT
+          session_id,
+          user_id,
+          device_id,
+          device_name,
+          ip_address,
+          user_agent,
+          last_active,
+          revoked_at,
+          expires_at,
+          created_at
+        FROM sessions
+        WHERE refresh_token_hash = $1
+          AND revoked_at IS NULL
+          AND expires_at > CURRENT_TIMESTAMP
+        LIMIT 1
+      `;
 
-    const values = [refreshTokenHash];
+      const values = [refreshTokenHash];
 
-    const result = await pool.query(query, values);
+      const result = await pool.query(query, values);
 
-    return result.rows[0] || null;
+      return result.rows[0] || null;
 
-  } catch (error) {
-    logger.error(
-      `Error finding session by refresh token hash: ${error.message}`
-    );
+    } catch (error) {
+      logger.error(
+        `Error finding session by refresh token hash: ${error.message}`
+      );
 
-    throw error;
-  }
-},
+      throw error;
+    }
+  },
   revokeAllUserSessions: async (userId) => {
     try {
       const query = `
@@ -135,6 +135,7 @@ findByRefreshTokenHash: async (refreshTokenHash) => {
           updated_at = CURRENT_TIMESTAMP
         WHERE user_id = $1
           AND revoked_at IS NULL
+          returning session_id
       `;
       const values = [userId];
       const result = await pool.query(query, values);
@@ -167,6 +168,67 @@ findByRefreshTokenHash: async (refreshTokenHash) => {
       return result.rows[0] || null;
     } catch (error) {
       logger.error(`Error finding session by sessionId: ${error.message}`);
+      throw error;
+    }
+  },
+  revokeSession: async (sessionId,userId) => {
+    try{
+      const query = `
+      update sessions
+      set revoked_at = CURRENT_TIMESTAMP
+      where session_id = $1 
+      AND user_id = $2
+      returning revoked_at
+    `;
+
+    const values = [sessionId,userId];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+    }catch (error) {
+      logger.error(`Error revoking session: ${error.message}`);
+      throw error;
+    }
+  },
+  revokeAllSessionsExceptCurrent: async (userId,currentSessionId) => {
+    try{
+      const query = `
+      update sessions 
+       set revoked_at = CURRENT_TIMESTAMP
+        where user_id = $1
+        and session_id  !=$2
+        and revoked_at is null
+      returning revoked_at
+    `;
+    const values = [userId,currentSessionId];
+    const result = await pool.query(query, values);
+    return result.rows;
+    }catch (error) {
+      logger.error(`Error revoking all sessions except current: ${error.message}`);
+      throw error;
+    }
+  },
+  findByUserId: async (userId) => {
+    try {
+      const query = `
+        SELECT
+          session_id,
+          user_id,
+          device_id,
+          device_name,
+          ip_address,
+          user_agent,
+          last_active,
+          revoked_at,
+          expires_at
+        FROM sessions
+        WHERE user_id = $1
+        AND revoked_at IS NULL
+      `;
+      const values = [userId];
+      const result = await pool.query(query, values);
+      return result.rows|| null;
+    } catch (error) {
+      logger.error(`Error finding session by userId: ${error.message}`);
       throw error;
     }
   },

@@ -124,7 +124,7 @@ const authService = {
       const sessionId = crypto.randomUUID();
 
       // 2. Generate your application JWTs
-      const accessToken = tokenService.generateAccessToken(user);
+      const accessToken = tokenService.generateAccessToken(user,sessionId);
 
       const refreshToken = tokenService.generateRefreshToken(user, sessionId);
 
@@ -272,6 +272,7 @@ const authService = {
       );
       const newAccessToken = tokenService.generateAccessToken({
         id: session.user_id,
+        sessionId: session.session_id,
       });
 
       const newRefreshTokenHash = tokenHelper.hashToken(newRefreshToken);
@@ -560,6 +561,144 @@ const authService = {
       logger.error(`Error occur in the change email verify service${error} `);
       throw error;
     }
+  },
+  logout: async(userId ,scope, sessionId,currentSessionId)=>{
+    try{
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!scope) {
+        return {
+          success: false,
+          message: "Invalid scope",
+        };
+      }
+      if (scope === "currentSession" && !currentSessionId) {
+        return {
+          success: false,
+          message: "Current session ID is required",
+        };
+      }
+      if (scope === "sessionId" && !sessionId) {
+        return {
+          success: false,
+          message: "Session ID is required",
+        };
+      }
+      if(scope === "currentSession"){
+        const revoke = await sessionRepo.revokeSession(currentSessionId,userId);
+        if(!revoke){
+          return {
+            success: false,
+            message: "Failed to revoke session",
+          };
+        }
+        const logoutTime = new Date()/1000;
+        await redisService.setSessionLogout(currentSessionId,logoutTime,1200);
+        logger.info(`revokeSession ${revoke}`);
+
+      }else if(scope === "allSessions"){
+        const revoke = await sessionRepo.revokeAllUserSessions(userId);
+        const logoutTime = new Date()/1000;
+        await redisService.setUserLogout(userId,logoutTime,1200);
+        if(!revoke){
+          return {
+            success: false,
+            message: "Failed to revoke all sessions",
+          };
+        }
+        logger.info(`revokeSession ${revoke}`);
+
+      }else if(scope === "sessionId"){
+        const revoke = await sessionRepo.revokeSession(sessionId,userId);
+        const logoutTime = new Date()/1000;
+        await redisService.setSessionLogout(sessionId,logoutTime,1200);
+        if(!revoke){
+          return {
+            success: false,
+            message: "Failed to revoke session",
+          };
+        }
+        logger.info(`revokeSession ${revoke}`);
+
+      }else if(scope === "allExceptCurrent"){
+        const revokedSessions = await sessionRepo. revokeAllSessionsExceptCurrent(userId,currentSessionId);
+        if(!revoke){
+          return {
+            success: false,
+            message: "Failed to revoke all sessions",
+          };
+        }
+        const logoutTime = Math.floor(
+          Date.now() / 1000,
+        );
+
+        // session that was revoked.
+        for (const session of revokedSessions) {
+          await redisService.setSessionLogout(
+            session.session_id,
+            logoutTime,
+            1200, 
+          );
+        }
+        logger.info(`revokeSession ${revoke}`);
+
+      }else{
+        return {
+          success: false,
+          message: "Invalid scope",
+        };
+      }
+      await  emailService.sendLogoutMail(
+        user.email,
+        "Your  have been from your account successfully",
+      );
+
+      return {
+        success: true,
+        message: "Successfully revoked session",
+      };
+      
+
+    } catch (error) {
+      logger.error(`Error occur in the logout service${error} `);
+      throw error;
+    }
+  },
+  allSessions: async (userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      const sessions = await sessionRepo.findByUserId(userId);
+      if (!sessions) {
+        return {
+          success: false,
+          message: "No active sessions",
+        };
+      }
+      return {
+        success: true,
+        sessions,
+      };
+    } catch (error) {
+      logger.error(`Error occur in the allSessions service${error} `);
+      throw error;
+    } 
   },
 };
 export default authService;

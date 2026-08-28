@@ -15,7 +15,7 @@ const redisService = {
         keys: [key],
         arguments: [String(expireSeconds)],
       });
-      logger.info(`Redis ratelimit key ${key} successfully`);
+      // logger.info(`Redis ratelimit key ${key} set  successfully`);
       return result;
     } catch (error) {
       logger.error(`Redis ratelimit key ${key} error ${error}`);
@@ -115,16 +115,49 @@ const redisService = {
     }
   },
   increasField: async (key, field) => {
-  try {
-    // hincrby increments a specific field inside a Redis Hash by 1
-    const value = await redisClient.hIncrBy(key, field, 1);
-    logger.info(`Redis increase hash key ${key} field ${field} successfully`);
-    return value;
-  } catch (error) {
-    logger.error(`Redis increase hash key ${key} field ${field} error ${error}`);
-    throw error;
-  }
-},
+    try {
+      // hincrby increments a specific field inside a Redis Hash by 1
+      const value = await redisClient.hIncrBy(key, field, 1);
+      logger.info(`Redis increase hash key ${key} field ${field} successfully`);
+      return value;
+    } catch (error) {
+      logger.error(
+        `Redis increase hash key ${key} field ${field} error ${error}`,
+      );
+      throw error;
+    }
+  },
+  setUserLogout: async (userId, timestamp, ttlSeconds) => {
+    try {
+      const key = `auth:logout:user:${userId}`;
+
+      await redisService.setWithExpiry(key, String(timestamp), ttlSeconds);
+
+      logger.info(`User logout timestamp stored for user ${userId}`);
+
+      return true;
+    } catch (error) {
+      logger.error(`Redis set user logout error ${error}`);
+
+      throw error;
+    }
+  },
+
+  setSessionLogout: async (sessionId, timestamp, ttlSeconds) => {
+    try {
+      const key = `auth:logout:session:${sessionId}`;
+
+      await redisService.setWithExpiry(key, String(timestamp), ttlSeconds);
+
+      logger.info(`Session logout timestamp stored for ${sessionId}`);
+
+      return true;
+    } catch (error) {
+      logger.error(`Redis set session logout error ${error}`);
+
+      throw error;
+    }
+  },
 };
 
 export default redisService;

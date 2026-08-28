@@ -20,6 +20,7 @@ const defaults = {
     SERVER_ERROR_MESSAGE : "Internal Server Error",
     INVALID_REQUEST_MESSAGE : "Invalid Request",
     NOT_FOUND_MESSAGE : "Not Found",
+    SERVICE_UNAVAILABLE_MESSAGE : "Service Unavailable",
 
     BCRYPT_SALT_ROUNDS :10,
 }

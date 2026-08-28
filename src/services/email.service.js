@@ -125,6 +125,28 @@ const emailService = {
             throw error;
         }
     },
+    async sendLogoutMail(email, message) {
+        try {
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject: "Your Account Has Been Logged Out",
+                text: message,
+                html: `
+                    <h2>Your Account Has Been Logged Out</h2>
+                    <p>${message}</p>
+                `,
+            });
+
+            logger.info(`Logout email sent to ${email}`);
+
+            return info;
+
+        } catch (error) {
+            logger.error("Email Logout Error", error);
+            throw error;
+        }
+    },
 };
 
 export default emailService;

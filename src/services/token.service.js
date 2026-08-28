@@ -4,10 +4,11 @@ import jwtConfig from "../config/jwt.js";
 import crypto from "crypto";
 
 const tokenService = {
-  generateAccessToken: (user) => {
+  generateAccessToken: (user,sessionId) => {
     try {
       const payload = {
         sub: String(user.id),
+        sid: sessionId,
         username: user.username,
         role: user.role,
         jti: crypto.randomUUID(),
@@ -30,12 +31,12 @@ const tokenService = {
         audience: jwtConfig.audience,
         issuer: jwtConfig.issuer,
       });
-      if (decoded.type !== "access" || !decoded.sub || !decoded.jti) {
+      if (decoded.type !== "access" || !decoded.sub || !decoded.jti || !decoded.sid ) {
         throw new Error("Invalid access token claims");
       }
       return decoded;
     } catch (error) {
-      throw new Error(`Invalid access token: ${error.message}`);
+      throw new Error(`Invalid access token`);
     }
   },
   generateRefreshToken: (user,sessionId) => {
