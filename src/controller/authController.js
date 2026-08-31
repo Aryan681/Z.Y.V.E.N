@@ -609,34 +609,35 @@ const authController = {
       );
     }
   },
-  // getMe: async (req, res) => {
-  //   try {
-  //     const userId = req.user.sub;
-  //     const result = await userService.getMe(userId);
-  //     if (!result.success) {
-  //       return responseHelper.customResponse(
-  //         res,
-  //         defaults.BAD_REQUEST_CODE,
-  //         result.message,
-  //         { error: result.message },
-  //       );
-  //     }
-  //     return responseHelper.customResponse(
-  //       res,
-  //       defaults.OK_CODE,
-  //       defaults.SUCCESS_MESSAGE,
-  //       { message: result },
-  //     );
-  //   } catch (error) {
-  //     logger.error(`error Occure in the getMe contorller${error}`);
-  //     return responseHelper.customResponse(
-  //       res,
-  //       defaults.INTERNAL_SERVER_ERROR_CODE,
-  //       defaults.SERVER_ERROR_MESSAGE,
-  //       { error: "An internal server error occurred" },
-  //     );
-  //   }
-  // },  
+  twofaSetup: async (req,res) => {
+    try{
+      const userId = req.user.sub;
+      const result = await authService.twofaSetup(userId);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the twofaSetup contorller${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+
 
 };
 

@@ -239,5 +239,23 @@ const userRepo = {
       throw error;
     }
   },
+  updateTwofaSecret: async (userId, twofaSecret) => {
+    try {
+      const query = `
+        UPDATE users
+        SET
+            twofa_secret = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id
+      `;
+      const values = [twofaSecret, userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error in updateTwofaSecret userRepo: ${error}`);
+      throw error;
+    }
+  },
 };
 export default userRepo;

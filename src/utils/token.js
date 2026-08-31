@@ -1,5 +1,5 @@
 import crypto from "crypto";
-
+import { generateSecret } from 'otplib';
 const tokenHelper = {
     generateVerificationToken() {
         return crypto.randomBytes(32).toString("hex");
@@ -9,6 +9,9 @@ const tokenHelper = {
     },
     generateVerificationCode() {
         return crypto.randomBytes(6).toString("hex");
+    },
+    generateSecret(){
+            return generateSecret();
     },
 };
 

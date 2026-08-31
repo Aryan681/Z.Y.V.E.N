@@ -9,6 +9,7 @@ import sessionRepo from "../repos/user/session.js";
 import { UAParser } from "ua-parser-js";
 import crypto from "crypto";
 import redisService from "../services/redis.service.js";
+import qrCodeGenerator from "../utils/qrCode.js";
 const authService = {
   registration: async (name, email, password) => {
     try {
@@ -697,6 +698,36 @@ const authService = {
       };
     } catch (error) {
       logger.error(`Error occur in the allSessions service${error} `);
+      throw error;
+    } 
+  },
+  twofaSetup: async (userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      const twofaSecret = tokenHelper.generateSecret();
+      const hashedSecret = tokenHelper.hashToken(twofaSecret);
+      const twofaQrCodeUrl = urlHelper.generateQrCodeUrl(twofaSecret,user.email);
+      console.log("adfasdfasdfdsfasdf");
+      const qrCode = await qrCodeGenerator.generateQrCode(twofaQrCodeUrl);
+      await userRepo.updateTwofaSecret(userId, hashedSecret);
+      return {
+        success: true,
+        qrCode,
+      };
+    } catch (error) {
+      logger.error(`Error occur in the twofaSetup service${error} `);
       throw error;
     } 
   },
