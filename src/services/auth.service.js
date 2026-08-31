@@ -717,7 +717,7 @@ const authService = {
         };
       }
       const twofaSecret = tokenHelper.generateSecret();
-      const hashedSecret = tokenHelper.hashToken(twofaSecret);
+      const hashedSecret = tokenHelper.encryptSecret(twofaSecret);
       const twofaQrCodeUrl = urlHelper.generateQrCodeUrl(twofaSecret,user.email);
       console.log("adfasdfasdfdsfasdf");
       const qrCode = await qrCodeGenerator.generateQrCode(twofaQrCodeUrl);
@@ -731,5 +731,51 @@ const authService = {
       throw error;
     } 
   },
-};
+  enableTwofa: async (userId,otp) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      if (!user.twofa_secret) {
+        return {
+          success: false,
+          message: "Complete 2FA setup before enabling 2FA",
+        };
+      }
+      const decryptedSecret = tokenHelper.decryptSecret(user.twofa_secret);
+      if (!decryptedSecret) {
+        return {
+          success: false,
+          message: "Invalid secret",
+        };
+      }
+      const valid = await tokenHelper.verifyOtp(decryptedSecret, otp);
+      if (!valid) {
+        return {
+          success: false,
+          message: "Invalid OTP",
+        };
+      }
+     
+      await userRepo.update2faStatus(userId,true);
+      return {
+        success: true,
+        message: "Twofa enabled successfully",
+      };
+    }catch (error) {
+      logger.error(`Error occur in the twofaEnable service${error} `);
+      throw error;  
+   }
+  },
+  };
 export default authService;

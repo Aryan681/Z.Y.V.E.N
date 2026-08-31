@@ -1,3 +1,4 @@
+import { OTP } from "otplib";
 import { z } from "zod";
 
 export const registrationSchema =  z.object({
@@ -41,3 +42,7 @@ export const logoutSchema  = z.object({
     session_id: z.string().uuid("Invalid session ID"),
     current_session_id: z.string().uuid("Invalid current session ID"),
 })
+export const twofaOtpSchema = z.object({
+    otp: z.string().trim().regex(/^\d{6}$/, {message: "OTP must be exactly 6 digits"}),
+
+}); 

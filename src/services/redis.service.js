@@ -36,7 +36,9 @@ const redisService = {
   get: async (key) => {
     try {
       const value = await redisClient.get(key);
-      logger.info(`Redis get key ${key} successfully`);
+       logger.info(
+        `Redis get key ${key}: ${value ? "found" : "not found"}`
+      );
       return value;
     } catch (error) {
       logger.error(`Redis get key ${key} error ${error}`);

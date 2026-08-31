@@ -628,7 +628,36 @@ const authController = {
         { message: result },
       );
     } catch (error) {
-      logger.error(`error Occure in the twofaSetup contorller${error}`);
+      logger.error(`error Occure in the enableTwofa controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  enableTwofa: async (req,res) => {
+    try{
+      const userId = req.user.sub;
+      const {otp} = req.body;
+      const result = await authService.enableTwofa(userId,otp);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the twofaSetup controller ${error}`);
       return responseHelper.customResponse(
         res,
         defaults.INTERNAL_SERVER_ERROR_CODE,

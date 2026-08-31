@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
+import {twofaOtpSchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -36,17 +36,17 @@ router.route("/change-email/verify").post(authenticate.verifyToken,validate(chan
 
 // logout & session management routes 
 router.route("/logout").post(validate(logoutSchema), authenticate.verifyToken, authController.logout);
-router.route("/sessions").get(ratelimiter.sessionsRateLimit,authenticate.verifyToken, authController.allSessions);
+// router.route("/sessions").get(ratelimiter.sessionsRateLimit,authenticate.verifyToken, authController.allSessions);
 // router.route("/me").get(ratelimiter.userProfileRateLimit,authenticate.verifyToken, authController.getMe);
 
 // 2FA / TOTP (Authenticator App) routes
 router.route("/two-fa/setup").post(authenticate.verifyToken, authController.twofaSetup);
-// router.route("/two-fa/enable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.twofaEnable);
-// router.route("/two-fa/verify").post(validate(twofaLoginVerifySchema), authController.twofaVerify);
+router.route("/two-fa/enable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.enableTwofa);
 // router.route("/two-fa/disable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.twofaDisable);
+// router.route("/two-fa/verify").post(validate(twofaLoginVerifySchema), authController.twofaVerify);
 // router.route("/two-fa/recovery-codes/generate").post(authenticate.verifyToken, authController.generateRecoveryCodes);
 // router.route("/two-fa/recovery-codes/verify").post(validate(twofaRecoverySchema), authController.twofaRecoveryVerify);
-//router.route("/two-fa/status").post(authenticate.verifyToken, authController.twofaStatus);
+//router.route("/two-fa/status").get(authenticate.verifyToken, authController.twofaStatus);
 
 // Magic Link (Passwordless Email) routes
 // router.route("/passwordless/send-link").post(ratelimiter.forgotPasswordRateLimit, validate(passwordlessSchema), authController.sendMagicLink);

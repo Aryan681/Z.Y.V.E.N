@@ -155,19 +155,21 @@ const userRepo = {
     try {
       const query = `
         SELECT
-            id,
-            name,
-            email,
-            password,
-            role,
-            provider,
-            is_verified,
-            verification_token,
-            verification_token_expires,
-            refresh_token
+        id,
+        name,
+        email,
+        password,
+        role,
+        provider,
+        is_verified,
+        verification_token,
+        verification_token_expires,
+        refresh_token,
+        twofa_secret
         FROM users
         WHERE id = $1
-    `;
+ 
+      `;
       const values = [userId];
       const result = await pool.query(query, values);
       return result.rows[0] || null;
@@ -254,6 +256,23 @@ const userRepo = {
       return result.rows[0] || null;
     } catch (error) {
       logger.error(`Error in updateTwofaSecret userRepo: ${error}`);
+      throw error;
+    }
+  },
+  update2faStatus: async (userId, isEnabled) => {
+    try {
+      const query = `
+        UPDATE users
+        SET
+            is_2fa_enabled = $1
+        WHERE id = $2
+        RETURNING id
+      `;
+      const values = [isEnabled, userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error in updateTwofaStatus userRepo: ${error}`);
       throw error;
     }
   },
