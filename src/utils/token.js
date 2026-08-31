@@ -17,7 +17,7 @@ const tokenHelper = {
   generateSecret() {
     return generateSecret();
   },
- encryptSecret(secret) {
+  encryptSecret(secret) {
     const iv = crypto.randomBytes(12);
 
     const cipher = crypto.createCipheriv(
@@ -39,7 +39,6 @@ const tokenHelper = {
       encrypted.toString("hex"),
     ].join(":");
   },
-
   decryptSecret(encryptedSecret) {
     if (!encryptedSecret) {
       throw new Error(
@@ -73,7 +72,6 @@ const tokenHelper = {
 
     return decrypted.toString("utf8");
   },
-
   async verifyOtp(decryptedSecret, otp) {
     const result = await verify({
       secret: decryptedSecret,

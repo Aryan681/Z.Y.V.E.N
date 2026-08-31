@@ -73,6 +73,40 @@ const tokenService = {
       throw new Error(`Invalid refresh token: ${error.message}`);
     }
   },
+  generateTwofaToken: (user) => {
+    try {
+      const payload = {
+        sub: String(user.id),
+        jti: crypto.randomUUID(),
+        type: "2fa-login",
+      };
+
+      return jwt.sign(payload, jwtConfig.access.secret, {
+        algorithm: jwtConfig.algorithm,
+        expiresIn: "5m",
+        issuer: jwtConfig.issuer,
+        audience: jwtConfig.audience,
+      });
+    } catch (error) {
+      throw new Error(`Error generating 2fa token: ${error.message}`);
+    }
+  },
+  verifyTwofaToken: (token) => {
+    try {
+      const rawToken = token?.replace(/^Bearer\s+/i, "").trim();
+      const decoded = jwt.verify(rawToken, jwtConfig.access.secret, {
+        algorithms: [jwtConfig.algorithm],
+        audience: jwtConfig.audience,
+        issuer: jwtConfig.issuer,
+      });
+      if (decoded.type !== "2fa-login" || !decoded.sub || !decoded.jti) {
+        throw new Error("Invalid 2fa token claims");
+      }
+      return decoded;
+    } catch (error) {
+      throw new Error(`Invalid 2fa token: ${error.message}`);
+    }
+  },
 };
 
 export default tokenService;

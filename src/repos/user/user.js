@@ -13,7 +13,8 @@ const userRepo = {
             is_verified,
             verification_token,
             verification_token_expires,
-            refresh_token
+            refresh_token,
+            is_2fa_enabled
         FROM users
         WHERE email = $1
     `;
@@ -165,7 +166,8 @@ const userRepo = {
         verification_token,
         verification_token_expires,
         refresh_token,
-        twofa_secret
+        twofa_secret,
+        is_2fa_enabled
         FROM users
         WHERE id = $1
  
@@ -264,7 +266,8 @@ const userRepo = {
       const query = `
         UPDATE users
         SET
-            is_2fa_enabled = $1
+            is_2fa_enabled = $1,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
         RETURNING id
       `;
@@ -272,7 +275,6 @@ const userRepo = {
       const result = await pool.query(query, values);
       return result.rows[0] || null;
     } catch (error) {
-      logger.error(`Error in updateTwofaStatus userRepo: ${error}`);
       throw error;
     }
   },

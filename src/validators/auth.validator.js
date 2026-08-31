@@ -46,3 +46,7 @@ export const twofaOtpSchema = z.object({
     otp: z.string().trim().regex(/^\d{6}$/, {message: "OTP must be exactly 6 digits"}),
 
 }); 
+export const twofaVerifySchema = z.object({
+    otp: z.string().trim().regex(/^\d{6}$/, {message: "OTP must be exactly 6 digits"}),
+    token: z.string().trim().min(1, {message: "2FA token is required"}),
+});

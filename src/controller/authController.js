@@ -150,6 +150,18 @@ const authController = {
           },
         );
       }
+      if (verifying.requires2FA) {
+        return responseHelper.customResponse(
+          res,
+          defaults.OK_CODE,
+          defaults.SUCCESS_MESSAGE,
+          {
+            message: "2FA verification required",
+            requires2FA: true,
+            twoFaToken: `Bearer ${verifying.twoFaToken}`,
+          },
+        );
+      }
       req.log.info(`User login successfully: ${email}`);
       res.cookie("refreshToken", verifying.refreshToken, {
         httpOnly: true,
@@ -666,6 +678,91 @@ const authController = {
       );
     }
   },
+  twofaStatus: async (req,res) => {
+    try{
+      const userId = req.user.sub;
+      const result = await authService.twofaStatus(userId);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the twofaStatus controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  disableTwofa: async (req,res) => {
+    try{
+      const userId = req.user.sub;
+      const {otp} = req.body;
+      const result = await authService.disableTwofa(userId,otp);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the disableTwofa controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  twofaVerify: async (req,res) => {
+    try{
+      const {otp,token} = req.body;
+      const result = await authService.twofaVerify(token, otp);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the twofaVerify controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },        
 
 
 };

@@ -202,7 +202,20 @@ const authService = {
           message: "Invalid email or password",
         };
       }
-
+      if (user.is_2fa_enabled) {
+        const twoFaToken = await authService.generate2faToken(user);
+        if (!twoFaToken) {
+          return {
+            success: false,
+            message: "Error generating 2fa token",
+          };
+        }
+        return {
+          success: true,
+          requires2FA: true,
+          twoFaToken,
+        };
+      }
       // Everything after authentication is shared
       const result = await authService.createAuthenticatedSession(
         user,
@@ -777,5 +790,149 @@ const authService = {
       throw error;  
    }
   },
-  };
+  twofaStatus: async (userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      if (!user.twofa_secret) {
+        return {
+          success: false,
+          message: "Complete 2FA setup before enabling 2FA",
+        };
+      }
+      return {
+        success: user.is_2fa_enabled,
+        message: `2FA is ${user.is_2fa_enabled ? "enabled" : "disabled"}`,
+      };
+    }catch (error) {
+      logger.error(`Error occur in the twofaStatus service${error} `);
+      throw error;  
+   }
+  },  
+  disableTwofa: async (userId,otp) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      if (!user.twofa_secret && !user.is_2fa_enabled) {
+        return {
+          success: false,
+          message: "alredy disabled or havednt setup 2FA",
+        };
+      }
+      const decryptedSecret = tokenHelper.decryptSecret(user.twofa_secret);
+      if (!decryptedSecret) {
+        return {
+          success: false,
+          message: "Invalid secret",
+        };
+      }
+      const valid = await tokenHelper.verifyOtp(decryptedSecret, otp);
+      if (!valid) {
+        return {
+          success: false,
+          message: "Invalid OTP",
+        };
+      }
+      await userRepo.update2faStatus(userId,false);
+      return {
+        success: true,
+        message: "Twofa disabled successfully",
+      };
+    }catch (error) {
+      logger.error(`Error occur in the twofaDisable service${error} `);
+      throw error;  
+   }
+  }, 
+  twofaVerify: async (token,otp) => {
+    try {
+      const decoded = tokenService.verifyTwofaToken(token);
+      if (!decoded.sub || !decoded.jti) {
+        return {
+          success: false,
+          message: "Invalid 2fa token",
+        };
+      }
+      const user = await userRepo.findUserById(decoded.sub);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.is_verified) {
+        return {
+          success: false,
+          message: "User not verified",
+        };
+      }
+      if (!user.twofa_secret) {
+        return {
+          success: false,
+          message: "Complete 2FA setup  ",
+        };
+      }
+      const decryptedSecret = tokenHelper.decryptSecret(user.twofa_secret);
+      if (!decryptedSecret) {
+        return {
+          success: false,
+          message: "Invalid secret",
+        };
+      }
+      const valid = await tokenHelper.verifyOtp(decryptedSecret, otp);
+      if (!valid) {
+        return {
+          success: false,
+          message: "Invalid OTP",
+        };
+      }
+      return {
+        success: true,
+        message: "Twofa verified successfully",
+      };
+    }catch (error) {
+      logger.error(`Error occur in the twofaVerify service${error} `);
+      throw error;  
+   }
+  },
+  generate2faToken: async (user) => {
+    try {
+
+      // 2. Generate your application JWTs
+      const twoFaToken = tokenService.generateTwofaToken(user);
+      if (!twoFaToken) {
+        return {
+          success: false,
+          message: "Error generating 2fa token",
+        };
+      }
+      return twoFaToken;
+
+    } catch (error) {
+      logger.error(`Error occur in the generate2faToken service${error} `);
+      throw error;
+    }
+  },
+};
 export default authService;
