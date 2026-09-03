@@ -3,6 +3,7 @@ import logger from "../config/logger.js";
 import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
 import googleService from "../services/google.service.js";
+import { Readable } from 'stream';
 const authController = {
   registration: async (req, res) => {
     try {
@@ -827,6 +828,29 @@ const authController = {
           result.message,
           { error: result.message },
         );
+      }
+      if (req.query.download === 'true') {
+        const codesArray = result.recoveryCodes || []; // Access the raw codes array from your service response
+        
+        // 1. Build the text layout inside a string
+        let fileContent = `=======================================\n`;
+        fileContent += `   YOUR 2FA EMERGENCY RECOVERY CODES   \n`;
+        fileContent += `=======================================\n`;
+        fileContent += `Keep these codes secure. Each code can be used ONLY once.\n\n`;
+        
+        codesArray.forEach((code, index) => {
+          fileContent += `[Code ${String(index + 1).padStart(2, '0')}]: ${code}\n`;
+        });
+        
+        fileContent += `\nGenerated on: ${new Date().toISOString()}\n`;
+
+        // 2. Set attachment headers to trigger the browser download save box
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="2fa-recovery-codes.txt"');
+
+        // 3. Stream the file content directly into the response stream
+        const stream = Readable.from([fileContent]);
+        return stream.pipe(res);
       }
       return responseHelper.customResponse(
         res,
