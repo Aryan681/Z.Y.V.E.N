@@ -73,10 +73,8 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 - **Device & Geolocation Context:** Automatic parsing of client User-Agent (`browser`, `os`, `deviceName`) and IP tracking stored per active session.
 - **Session Management:** Logout for the current session, a selected session, all sessions, or all sessions except the current one, plus active-session listing.
 - **TOTP Two-Factor Authentication:** Authenticator-app setup with QR code, OTP-confirmed enable/disable, login verification, encrypted TOTP secret storage, and 2FA status checks.
-
-### 🟡 In Progress / Upcoming (Route Blueprints Added)
-- **Session Lifecycle APIs:** `GET /me` and additional session endpoints beyond the currently implemented logout and `GET /sessions` routes.
 - **2FA Recovery Codes:** Recovery-code generation and verification.
+### 🟡 In Progress / Upcoming (Route Blueprints Added)
 - **Passwordless / Magic Link:** Single-use cryptographic email login tokens.
 - **Passkeys & WebAuthn:** FIDO2 biometric authentication (TouchID, FaceID, Windows Hello).
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
@@ -209,13 +207,12 @@ app.use("/api/v1/auth", authRoutes);
 | `POST` | `/two-fa/disable` | Verify OTP and disable 2FA | JWT Authenticated |
 | `POST` | `/two-fa/verify` | Verify OTP during a 2FA login challenge | Public + 2FA Token |
 | `GET` | `/two-fa/status` | Return the current 2FA status | JWT Authenticated |
+| `POST` | `/two-fa/recovery-codes/generate` | Generate recovery codes | 2FA Recovery |
+| `POST` | `/two-fa/recovery-codes/verify` | Verify a recovery code | 2FA Recovery |
 
 ### 🟡 Blueprint Endpoints (Commented in `auth.route.js`)
 | Method | Endpoint | Description | Target Flow |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/me` | Get current authenticated user profile | User Profile |
-| `POST` | `/two-fa/recovery-codes/generate` | Generate recovery codes | 2FA Recovery |
-| `POST` | `/two-fa/recovery-codes/verify` | Verify a recovery code | 2FA Recovery |
 | `POST` | `/passwordless/send-link`| Send magic login link to email | Passwordless |
 | `GET` | `/passwordless/verify` | Verify magic link token & issue JWT | Passwordless |
 | `POST` | `/passkey/register/options`| Get WebAuthn registration options | Passkeys / FIDO2 |
@@ -240,6 +237,9 @@ CREATE TABLE users (
     verification_token_expires TIMESTAMP,
     reset_token VARCHAR(255),
     reset_token_expires TIMESTAMP,
+    reason TEXT,
+    isActive BOOLEAN DEFAULT true,
+    recovery_codes jsonb DEFAULT '[]'::jsonb,
     two_fa_enabled BOOLEAN DEFAULT FALSE,
     two_fa_secret VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -274,7 +274,7 @@ CREATE TABLE sessions (
 - [x] **Phase 5:** Cryptographic Refresh Token Reuse Detection & Breach Containment
 - [x] **Phase 6:** Session Management APIs (`/logout`, `/sessions`)
 - [x] **Phase 7:** Two-Factor Authentication (TOTP setup, enable, login verification, disable, and status)
-- [ ] **Phase 7.1:** Two-Factor Recovery Codes
+- [x] **Phase 7.1:** Two-Factor Recovery Codes
 - [ ] **Phase 8:** Passwordless Magic Link Login
 - [ ] **Phase 9:** Passkeys / WebAuthn (FIDO2 Biometric Login)
 - [ ] **Phase 10:** Adaptive Risk Engine (Impossible Travel, Geo-Anomalies, Dynamic MFA)
