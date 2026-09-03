@@ -104,6 +104,13 @@ const tokenService = {
       }
       return decoded;
     } catch (error) {
+       if (error.name === "TokenExpiredError") {
+      return {
+        success: false,
+        message: "2FA session expired. Please login again",
+      };
+    }
+     
       throw new Error(`Invalid 2fa token: ${error.message}`);
     }
   },

@@ -868,10 +868,10 @@ const authService = {
   twofaVerify: async (token,otp,sessionContext) => {
     try {
       const decoded = tokenService.verifyTwofaToken(token);
-      if (!decoded) {
+      if (!decoded.success) {
         return {
-          success: false,
-          message: "token is invalid",
+          success: decoded.success,
+          message: decoded.message || "token is invalid",
         };
       }
       const user = await userRepo.findUserById(decoded.sub);
@@ -962,5 +962,73 @@ const authService = {
       throw error;
     }
   },
+  generateRecoveryCodes: async (userId) => {
+    try {
+      const user = await userRepo.findUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      const recoveryCodes = tokenHelper.generateRecoveryCodes();
+      const hashedRecoveryCodes = tokenHelper.encryptSecret(recoveryCodes);
+      await userRepo.updateRecoveryCodes(userId, hashedRecoveryCodes);
+      return {
+        success: true,
+        recoveryCodes,
+      };
+    } catch (error) {
+      logger.error(`Error occur in the generateRecoveryCodes service: ${error} `);
+      throw error;
+    }
+  },
+  twofaRecoveryVerify: async (token, recoveryCode,sessionContext) => {
+    try {
+       const decoded = tokenService.verifyTwofaToken(token);
+      if (!decoded) {
+        return {
+          success: false,
+          message: "token is invalid",
+        };
+      }
+      const user = await userRepo.findUserById(decoded.sub);
+      if (!user) {
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      if (!user.twofa_secret) {
+        return {
+          success: false,
+          message: "Complete 2FA setup  ",
+        };
+      }
+      let recoveryCodes = user.recovery_codes; //encrypted recovery codes
+      const decryptedCodes = tokenHelper.decryptSecret(recoveryCodes);//decrypted recovery codes
+      const matchedIndex = decryptedCodes.indexOf(recoveryCode);
+      if (matchedIndex === -1) { 
+        return {
+          success: false, 
+          message: "Invalid recovery code",
+        };
+      }
+      decryptedCodes.splice(matchedIndex, 1); 
+      recoveryCodes.splice(matchedIndex, 1);
+      await userRepo.updateRecoveryCodes(decoded.sub, recoveryCodes); //update recovery codes 
+      const result = await authService.createAuthenticatedSession(
+        user,
+        sessionContext,
+      );
+      return {
+        success: true,
+        result,
+      };
+    } catch (error) {
+      logger.error(`Error occur in the twofaRecoveryVerify service: ${error} `);
+      throw error;
+    }
+  },  
 };
 export default authService;

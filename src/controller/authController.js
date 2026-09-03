@@ -816,6 +816,76 @@ const authController = {
       );
     }
   },
+  generateRecoveryCodes: async (req, res) => {
+    try {
+      const userId = req.user.sub;
+      const result = await authService.generateRecoveryCodes(userId);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the generateRecoveryCodes controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
+  twofaRecoveryVerify: async (req, res) => {
+    try {
+      const { recoveryCode ,token ,deviceId} = req.body;
+      const sessionContext = {
+        deviceId,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || "unknown",
+      };
+      const result = await authService.twofaRecoveryVerify( token ,recoveryCode, sessionContext);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+     res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        {
+          accessToken: result.result.accessToken,
+          session: result.result.session,
+        },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the twofaRecoveryVerify controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },      
 
 
 };

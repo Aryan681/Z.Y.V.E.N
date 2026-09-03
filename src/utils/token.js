@@ -18,6 +18,9 @@ const tokenHelper = {
     return generateSecret();
   },
   encryptSecret(secret) {
+    if (Array.isArray(secret)) {
+      return secret.map(singleSecret => this.encryptSecret(singleSecret));
+    }
     const iv = crypto.randomBytes(12);
 
     const cipher = crypto.createCipheriv(
@@ -40,12 +43,16 @@ const tokenHelper = {
     ].join(":");
   },
   decryptSecret(encryptedSecret) {
+      if (Array.isArray(encryptedSecret)) {
+      return encryptedSecret.map(singleSecret => this.decryptSecret(singleSecret));
+    }
+
     if (!encryptedSecret) {
       throw new Error(
         "2FA secret is not configured for this user"
       );
     }
-
+   
     const [ivHex, authTagHex, encryptedHex] =
       encryptedSecret.split(":");
 
@@ -79,6 +86,13 @@ const tokenHelper = {
     });
 
     return result.valid;
+  },
+  generateRecoveryCodes() {
+    const codes =  [] ;
+    for (let i = 0; i < 10; i++) {
+      codes.push(crypto.randomBytes(3).toString("hex"));
+    }
+    return codes;
   },
 
 };

@@ -47,5 +47,10 @@ const ratelimiter = {
   //   maxRequests: 10,
   //   expirySeconds: 60,
   // }),
+  recoveryCodesRateLimit: rateLimitMiddleware({
+    key: "recoveryCodes",
+    maxRequests: 5,
+    expirySeconds: 864000,
+  }),
 };
 export default ratelimiter;

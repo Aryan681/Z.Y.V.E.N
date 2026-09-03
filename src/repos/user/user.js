@@ -172,7 +172,8 @@ const userRepo = {
         verification_token_expires,
         refresh_token,
         twofa_secret,
-        is_2fa_enabled
+        is_2fa_enabled,
+        recovery_codes
         FROM users
         WHERE id = $1
         AND isActive = true
@@ -331,6 +332,25 @@ const userRepo = {
       
     }finally{
        client.release();
+    }
+  },
+  updateRecoveryCodes: async (userId, recoveryCodes) => {
+    try {
+      const query = `
+        UPDATE users
+        SET
+            recovery_codes = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        AND isActive = true
+        RETURNING id
+      `;
+      const values = [JSON.stringify(recoveryCodes), userId];
+      const result = await pool.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      logger.error(`Error occur in  the recoveryCodes update userrepo ${error}`);
+      throw error;
     }
   },
 };

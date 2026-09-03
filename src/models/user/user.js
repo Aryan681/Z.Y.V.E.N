@@ -20,6 +20,7 @@ const Profile = async()=> {
             twofa_secret TEXT,
             reason TEXT,
             isActive BOOLEAN DEFAULT true,
+            recovery_codes jsonb DEFAULT '[]'::jsonb,
             is_2fa_enabled BOOLEAN DEFAULT false,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -38,6 +39,7 @@ const Profile = async()=> {
             WHERE reset_token IS NOT NULL;
         Alter Table users ADD COLUMN IF NOT EXISTS reason TEXT;
         Alter Table users ADD COLUMN IF NOT EXISTS isActive BOOLEAN DEFAULT true;
+        Alter Table users ADD COLUMN IF NOT EXISTS recovery_codes jsonb DEFAULT '[]'::jsonb;
 `);
         
       logger.info('users table is created');

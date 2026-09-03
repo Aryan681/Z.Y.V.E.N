@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {deleteAccountSchema,twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
+import {twofaRecoverySchema,deleteAccountSchema,twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -44,8 +44,8 @@ router.route("/two-fa/setup").post(authenticate.verifyToken, authController.twof
 router.route("/two-fa/enable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.enableTwofa);
 router.route("/two-fa/disable").post(authenticate.verifyToken, validate(twofaOtpSchema), authController.disableTwofa);
 router.route("/two-fa/verify").post(validate(twofaVerifySchema), authController.twofaVerify);
-// router.route("/two-fa/recovery-codes/generate").post(authenticate.verifyToken, authController.generateRecoveryCodes);
-// router.route("/two-fa/recovery-codes/verify").post(validate(twofaRecoverySchema), authController.twofaRecoveryVerify);
+router.route("/two-fa/recovery-codes/generate").post(ratelimiter.recoveryCodesRateLimit, authenticate.verifyToken, authController.generateRecoveryCodes);
+router.route("/two-fa/recovery-codes/verify").post(validate(twofaRecoverySchema), authController.twofaRecoveryVerify);
 router.route("/two-fa/status").get(authenticate.verifyToken, authController.twofaStatus);
 
 // Magic Link (Passwordless Email) routes

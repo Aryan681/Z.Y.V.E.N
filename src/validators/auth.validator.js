@@ -54,3 +54,8 @@ export const twofaVerifySchema = z.object({
 export const deleteAccountSchema = z.object({
     reason: z.string().trim().min(1, {message: "Reason for account deletion is required"}).max(500, {message: "Reason for account deletion must be at most 500 characters long"}),
 });
+export const twofaRecoverySchema = z.object({
+    recoveryCode: z.string().trim().min(6, {message: "Recovery code is required"}),
+    deviceId: z.string().uuid("Invalid device ID"),
+    token: z.string().trim().min(1, {message: "2FA token is required"}),
+});
