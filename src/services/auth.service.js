@@ -881,12 +881,6 @@ const authService = {
           message: "Invalid user",
         };
       }
-      if (!user.is_verified) {
-        return {
-          success: false,
-          message: "User not verified",
-        };
-      }
       if (!user.twofa_secret) {
         return {
           success: false,

@@ -294,12 +294,22 @@ const authController = {
           { error: result.message },
         );
       }
+       res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
       logger.info(`Google callback successful for code`);
       return responseHelper.customResponse(
         res,
         defaults.OK_CODE,
         defaults.SUCCESS_MESSAGE,
-        { message: result },
+        {
+          message: "user login successfully",
+          accessToken: result.accessToken,
+          session: result.session,
+        },
       );
     } catch (error) {
       logger.error(`error occur in the google callback controller${error} `);
@@ -752,11 +762,20 @@ const authController = {
           { error: result.message },
         );
       }
+      res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
       return responseHelper.customResponse(
         res,
         defaults.OK_CODE,
         defaults.SUCCESS_MESSAGE,
-        { message: result },
+        {
+          accessToken: result.result.accessToken,
+          session: result.result.session,
+        },
       );
     } catch (error) {
       logger.error(`error Occure in the twofaVerify controller ${error}`);
