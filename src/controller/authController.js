@@ -737,8 +737,13 @@ const authController = {
   },
   twofaVerify: async (req,res) => {
     try{
-      const {otp,token} = req.body;
-      const result = await authService.twofaVerify(token, otp);
+      const {otp,token,deviceId} = req.body;
+      const sessionContext = {
+        deviceId,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || "unknown",
+      };
+      const result = await authService.twofaVerify(token, otp,sessionContext);
       if (!result.success) {
         return responseHelper.customResponse(
           res,
@@ -762,7 +767,36 @@ const authController = {
         { error: "An internal server error occurred" },
       );
     }
-  },        
+  },   
+  deleteAccount: async (req, res) => {
+    try{
+      const userId = req.user.sub;
+      const {reason} = req.body;
+      const result = await authService.deleteAccount(userId,reason);
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        { message: result },
+      );
+    } catch (error) {
+      logger.error(`error Occure in the deleteAccount controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
 
 
 };

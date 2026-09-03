@@ -171,13 +171,7 @@ const googleService = {
 
       const googleUser = await googleService.getGoogleUser(tokens.access_token);
 
-      logger.debug(
-        {
-          googleId: googleUser.googleId,
-          email: googleUser.email,
-        },
-        "Google user retrieved",
-      );
+      logger.debug({googleId: googleUser.googleId,email: googleUser.email,},"Google user retrieved",);
 
       // 5. Make sure Google email is verified
 
@@ -198,6 +192,7 @@ const googleService = {
       // 6. Find existing Google account
 
       let user = await userRepo.findUserByGoogleId(googleUser.googleId);
+      console.log("USER FOUND BY GOOGLE ID:", user);
 
       // 7. If Google account doesn't exist
 
@@ -227,6 +222,7 @@ const googleService = {
           googleUser.email,
           googleUser.googleId,
         );
+        console.log("NEW GOOGLE USER CREATED:", user);
 
         if (!user) {
           throw new Error("Failed to create Google user");
@@ -243,12 +239,7 @@ const googleService = {
 
       // 8. Create application session
 
-      logger.debug(
-        {
-          userId: user.id,
-        },
-        "Creating authenticated session",
-      );
+      logger.debug(`Creating authenticated session${user.id}`);
 
       const authResult = await authService.createAuthenticatedSession(
         user,

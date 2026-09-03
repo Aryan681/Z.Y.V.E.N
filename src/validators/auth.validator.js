@@ -49,4 +49,8 @@ export const twofaOtpSchema = z.object({
 export const twofaVerifySchema = z.object({
     otp: z.string().trim().regex(/^\d{6}$/, {message: "OTP must be exactly 6 digits"}),
     token: z.string().trim().min(1, {message: "2FA token is required"}),
+    deviceId: z.string().uuid("Invalid device ID"),
+});
+export const deleteAccountSchema = z.object({
+    reason: z.string().trim().min(1, {message: "Reason for account deletion is required"}).max(500, {message: "Reason for account deletion must be at most 500 characters long"}),
 });

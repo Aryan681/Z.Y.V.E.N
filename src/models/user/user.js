@@ -18,6 +18,8 @@ const Profile = async()=> {
             reset_token VARCHAR(255),
             reset_token_expires TIMESTAMP,
             twofa_secret TEXT,
+            reason TEXT,
+            isActive BOOLEAN DEFAULT true,
             is_2fa_enabled BOOLEAN DEFAULT false,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,6 +36,8 @@ const Profile = async()=> {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_reset_token
             ON users(reset_token)
             WHERE reset_token IS NOT NULL;
+        Alter Table users ADD COLUMN IF NOT EXISTS reason TEXT;
+        Alter Table users ADD COLUMN IF NOT EXISTS isActive BOOLEAN DEFAULT true;
 `);
         
       logger.info('users table is created');

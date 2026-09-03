@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
+import {deleteAccountSchema,twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -63,6 +63,6 @@ router.route("/two-fa/status").get(authenticate.verifyToken, authController.twof
 // router.route("/invite-register").post(validate(inviteRegisterSchema), authController.inviteRegister);
 
 // Account deletion & lifecycle routes
-// router.route("/account").delete(authenticate.verifyToken, validate(deleteAccountSchema), authController.deleteAccount);
+router.route("/account/delete").delete(authenticate.verifyToken, validate(deleteAccountSchema), authController.deleteAccount);
 
 export default router;

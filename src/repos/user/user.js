@@ -17,6 +17,7 @@ const userRepo = {
             is_2fa_enabled
         FROM users
         WHERE email = $1
+        AND isActive = true
     `;
       const values = [email];
       const result = await pool.query(query, values);
@@ -59,6 +60,7 @@ const userRepo = {
             verification_token_expires
         FROM users
         WHERE verification_token = $1
+        AND isActive = true
     `;
     const values = [token];
     const result = await pool.query(query, values);
@@ -73,6 +75,7 @@ const userRepo = {
             verification_token_expires = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
+        AND isActive = true
         RETURNING id, name, email, is_verified
     `;
 
@@ -88,6 +91,7 @@ const userRepo = {
             verification_token_expires = $2,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
+        AND isActive = true
         RETURNING id
     `;
 
@@ -129,6 +133,7 @@ const userRepo = {
                     google_id = $1,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $2
+                AND isActive = true
                 RETURNING id
             `;
       const values = [googleId, userId];
@@ -143,7 +148,7 @@ const userRepo = {
       const query = `
                 INSERT INTO users (name, email, google_id,is_verified)
                 VALUES ($1, $2, $3,TRUE)
-                RETURNING email, name
+                RETURNING email, name ,id
             `;
       const values = [name, email, googleId];
       const result = await pool.query(query, values);
@@ -170,6 +175,7 @@ const userRepo = {
         is_2fa_enabled
         FROM users
         WHERE id = $1
+        AND isActive = true
  
       `;
       const values = [userId];
@@ -185,6 +191,7 @@ const userRepo = {
       Update users 
       set password = $1
       where id =$2
+      AND isActive = true
        RETURNING id
       `
       const values = [hashedPassword,userId];
@@ -203,6 +210,7 @@ const userRepo = {
             reset_token_expires = $2,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
+        AND isActive = true
         RETURNING id
     `;
 
@@ -221,6 +229,7 @@ const userRepo = {
             reset_token_expires
         FROM users
         WHERE reset_token = $1
+        AND isActive = true
     `;
     const values = [token];
     const result = await pool.query(query, values);
@@ -233,6 +242,7 @@ const userRepo = {
         SET email = $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
+        AND isActive = true
         RETURNING id, name, email
       `;
       const values = [email, userId];
@@ -251,6 +261,7 @@ const userRepo = {
             twofa_secret = $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
+        AND isActive = true
         RETURNING id
       `;
       const values = [twofaSecret, userId];
@@ -269,6 +280,7 @@ const userRepo = {
             is_2fa_enabled = $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
+        AND isActive = true
         RETURNING id
       `;
       const values = [isEnabled, userId];
@@ -276,6 +288,49 @@ const userRepo = {
       return result.rows[0] || null;
     } catch (error) {
       throw error;
+    }
+  },
+  softDeleteUser:async(userId,reason)=>{
+      const client = await pool.connect();
+
+    try{
+      await client.query('BEGIN');
+
+      const UserQuery = `
+      update users
+      set isActive = false,
+         reason = $1,
+         updated_at = CURRENT_TIMESTAMP,
+         email = CONCAT(email, '_deleted_', NOW()::text),
+         twofa_secret = NULL,
+         google_id = NULL
+        where id = $2
+        and isActive = true
+        RETURNING id, email, isActive;
+      `;
+      const values = [reason,userId];
+      const userResult = await client.query(UserQuery, values);
+        if (userResult.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      const sessionQuery = `
+      UPDATE sessions 
+      SET revoked_at = CURRENT_TIMESTAMP, 
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE user_id = $1 
+        AND revoked_at IS NULL;
+    `;
+    await client.query(sessionQuery, [userId]);
+    await client.query('COMMIT');
+
+    return userResult.rows[0] || null;
+    }catch(error){
+      await client.query('ROLLBACK');
+      throw error;
+      
+    }finally{
+       client.release();
     }
   },
 };

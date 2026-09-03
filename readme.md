@@ -40,7 +40,7 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
                                      │
          ┌───────────────────────────┼───────────────────────────┐
          ▼                           ▼                           ▼
-  Email / Password              OAuth 2.0 (Google)        TOTP 2FA / Passkeys (Planned)
+  Email / Password              OAuth 2.0 (Google)        TOTP 2FA
          │                           │                           │
          └───────────────────────────┼───────────────────────────┘
                                      │
@@ -71,10 +71,12 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 - **Resilient Rate Limiting:** Atomic Redis Lua scripting with local in-memory fallback and fail-open guarantees.
 - **Anti-Enumeration Protection:** Constant-time authentication comparisons and unified `"Invalid email or password"` responses across login endpoints.
 - **Device & Geolocation Context:** Automatic parsing of client User-Agent (`browser`, `os`, `deviceName`) and IP tracking stored per active session.
+- **Session Management:** Logout for the current session, a selected session, all sessions, or all sessions except the current one, plus active-session listing.
+- **TOTP Two-Factor Authentication:** Authenticator-app setup with QR code, OTP-confirmed enable/disable, login verification, encrypted TOTP secret storage, and 2FA status checks.
 
 ### 🟡 In Progress / Upcoming (Route Blueprints Added)
-- **Session Lifecycle APIs:** `POST /logout`, `POST /logout/all-devices`, `POST /logout/device/:sessionId`, `GET /sessions`, `GET /me`.
-- **Two-Factor Authentication (2FA / TOTP):** Authenticator app pairing (Google Authenticator/Authy), Base32 secrets, QR codes, and backup recovery codes.
+- **Session Lifecycle APIs:** `GET /me` and additional session endpoints beyond the currently implemented logout and `GET /sessions` routes.
+- **2FA Recovery Codes:** Recovery-code generation and verification.
 - **Passwordless / Magic Link:** Single-use cryptographic email login tokens.
 - **Passkeys & WebAuthn:** FIDO2 biometric authentication (TouchID, FaceID, Windows Hello).
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
@@ -199,20 +201,21 @@ app.use("/api/v1/auth", authRoutes);
 | `POST` | `/forgot-password` | Request password reset email | Rate Limited |
 | `POST` | `/reset-password` | Complete password reset via token | Rate Limited |
 | `POST` | `/change-email` | Request dual-code email change | JWT Authenticated |
-| `POST` | `/change-email/verify-email`| Verify dual codes & update email | JWT Authenticated |
+| `POST` | `/change-email/verify`| Verify dual codes & update email | JWT Authenticated |
+| `POST` | `/logout` | Revoke one or more sessions according to `scope` | JWT Authenticated |
+| `GET` | `/sessions` | List active sessions and device metadata | JWT Authenticated |
+| `POST` | `/two-fa/setup` | Generate an authenticator QR code | JWT Authenticated |
+| `POST` | `/two-fa/enable` | Verify OTP and enable 2FA | JWT Authenticated |
+| `POST` | `/two-fa/disable` | Verify OTP and disable 2FA | JWT Authenticated |
+| `POST` | `/two-fa/verify` | Verify OTP during a 2FA login challenge | Public + 2FA Token |
+| `GET` | `/two-fa/status` | Return the current 2FA status | JWT Authenticated |
 
 ### 🟡 Blueprint Endpoints (Commented in `auth.route.js`)
 | Method | Endpoint | Description | Target Flow |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/logout` | Revoke current session & clear cookie | Session Management |
-| `POST` | `/logout/all-devices` | Revoke all active sessions | Session Management |
-| `POST` | `/logout/device/:sessionId` | Revoke specific device session | Session Management |
-| `GET` | `/sessions` | List all active logins & device metadata | Session Management |
 | `GET` | `/me` | Get current authenticated user profile | User Profile |
-| `POST` | `/two-fa/setup` | Generate TOTP secret & QR code | 2FA / Authenticator |
-| `POST` | `/two-fa/enable` | Confirm OTP & enable 2FA | 2FA / Authenticator |
-| `POST` | `/two-fa/verify` | Verify 2FA OTP during step-up login | 2FA / Authenticator |
-| `POST` | `/two-fa/disable` | Disable 2FA with password/OTP check | 2FA / Authenticator |
+| `POST` | `/two-fa/recovery-codes/generate` | Generate recovery codes | 2FA Recovery |
+| `POST` | `/two-fa/recovery-codes/verify` | Verify a recovery code | 2FA Recovery |
 | `POST` | `/passwordless/send-link`| Send magic login link to email | Passwordless |
 | `GET` | `/passwordless/verify` | Verify magic link token & issue JWT | Passwordless |
 | `POST` | `/passkey/register/options`| Get WebAuthn registration options | Passkeys / FIDO2 |
@@ -269,8 +272,9 @@ CREATE TABLE sessions (
 - [x] **Phase 3:** Google OAuth 2.0 & Account Linking
 - [x] **Phase 4:** Dual-Channel Email Update with Brute-Force Protection
 - [x] **Phase 5:** Cryptographic Refresh Token Reuse Detection & Breach Containment
-- [ ] **Phase 6:** Session Management APIs (`/logout`, `/all-devices`, `/sessions`, `/me`)
-- [ ] **Phase 7:** Two-Factor Authentication (TOTP / Google Authenticator) & Recovery Codes
+- [x] **Phase 6:** Session Management APIs (`/logout`, `/sessions`)
+- [x] **Phase 7:** Two-Factor Authentication (TOTP setup, enable, login verification, disable, and status)
+- [ ] **Phase 7.1:** Two-Factor Recovery Codes
 - [ ] **Phase 8:** Passwordless Magic Link Login
 - [ ] **Phase 9:** Passkeys / WebAuthn (FIDO2 Biometric Login)
 - [ ] **Phase 10:** Adaptive Risk Engine (Impossible Travel, Geo-Anomalies, Dynamic MFA)

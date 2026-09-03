@@ -865,13 +865,13 @@ const authService = {
       throw error;  
    }
   }, 
-  twofaVerify: async (token,otp) => {
+  twofaVerify: async (token,otp,sessionContext) => {
     try {
       const decoded = tokenService.verifyTwofaToken(token);
-      if (!decoded.sub || !decoded.jti) {
+      if (!decoded) {
         return {
           success: false,
-          message: "Invalid 2fa token",
+          message: "token is invalid",
         };
       }
       const user = await userRepo.findUserById(decoded.sub);
@@ -907,9 +907,13 @@ const authService = {
           message: "Invalid OTP",
         };
       }
+       const result = await authService.createAuthenticatedSession(
+        user,
+        sessionContext,
+      );
       return {
         success: true,
-        message: "Twofa verified successfully",
+        result,
       };
     }catch (error) {
       logger.error(`Error occur in the twofaVerify service${error} `);
@@ -931,6 +935,36 @@ const authService = {
 
     } catch (error) {
       logger.error(`Error occur in the generate2faToken service${error} `);
+      throw error;
+    }
+  },
+  deleteAccount: async (userId,reason) => {
+    try{
+      const user = await userRepo.findUserById(userId);
+      if (!user) { 
+        return {
+          success: false,
+          message: "Invalid user",
+        };
+      }
+      const softDelete = await userRepo.softDeleteUser(userId,reason);
+      if (!softDelete) {
+        return {
+          success: false,
+          message: "Failed to soft delete user",
+        };
+      }
+      const logoutTime = new Date()/1000;
+      await redisService.setUserLogout(userId,logoutTime,1200);
+    
+
+      return {
+        success: true,
+        message: "User soft deleted successfully",
+      };
+
+    } catch (error) {
+      logger.error(`Error occur in the deleteAccount service: ${error} `);
       throw error;
     }
   },
