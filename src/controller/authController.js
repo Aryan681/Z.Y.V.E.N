@@ -151,6 +151,18 @@ const authController = {
           },
         );
       }
+      if (verifying.requiresRiskVerification) {
+        return responseHelper.customResponse(
+          res,
+          defaults.OK_CODE,
+          defaults.SUCCESS_MESSAGE,
+          {
+            message: "Email verification required to complete sign-in",
+            requiresRiskVerification: true,
+            riskToken: `Bearer ${verifying.riskToken}`,
+          },
+        );
+      }
       if (verifying.requires2FA) {
         return responseHelper.customResponse(
           res,
@@ -788,6 +800,55 @@ const authController = {
       );
     }
   },   
+  riskVerify: async (req, res) => {
+    try {
+      const { token, code, deviceId } = req.body;
+      const sessionContext = {
+        deviceId,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] || "unknown",
+      };
+      const result = await authService.riskVerify(
+        token,
+        code,
+        sessionContext,
+      );
+
+      if (!result.success) {
+        return responseHelper.customResponse(
+          res,
+          defaults.BAD_REQUEST_CODE,
+          result.message,
+          { error: result.message },
+        );
+      }
+
+      res.cookie("refreshToken", result.result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        {
+          accessToken: result.result.accessToken,
+          session: result.result.session,
+        },
+      );
+    } catch (error) {
+      logger.error(`error occur in the risk verification controller ${error}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "An internal server error occurred" },
+      );
+    }
+  },
   deleteAccount: async (req, res) => {
     try{
       const userId = req.user.sub;

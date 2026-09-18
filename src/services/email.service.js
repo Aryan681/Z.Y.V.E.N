@@ -80,6 +80,31 @@ const emailService = {
             throw error;
         }
     },
+    async sendRiskVerificationMail(email, verificationCode) {
+        try {
+            const subject = "Verify Your Recent Sign-in";
+            const message = `We detected unusual sign-in activity. Enter this verification code to complete your sign-in: ${verificationCode}`;
+
+            const info = await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: email,
+                subject,
+                text: message,
+                html: `
+                    <h2>${subject}</h2>
+                    <p>${message}</p>
+                    <p>This code expires in 10 minutes and can be used once.</p>
+                    <p>If you did not attempt to sign in, secure your account immediately.</p>
+                `,
+            });
+
+            logger.info(`Risk verification email sent to ${email}`);
+            return info;
+        } catch (error) {
+            logger.error("Risk verification email service error", error);
+            throw error;
+        }
+    },
     async sendEmailChangeNotification(oldEmail, newEmail) {
         try {
             const info = await transporter.sendMail({

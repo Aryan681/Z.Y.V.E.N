@@ -114,6 +114,45 @@ const tokenService = {
       throw new Error(`Invalid 2fa token: ${error.message}`);
     }
   },
+  generateRiskToken: (user, tokenId = crypto.randomUUID()) => {
+    try {
+      const payload = {
+        sub: String(user.id),
+        jti: tokenId,
+        type: "risk-login",
+      };
+
+      return jwt.sign(payload, jwtConfig.access.secret, {
+        algorithm: jwtConfig.algorithm,
+        expiresIn: "10m",
+        issuer: jwtConfig.issuer,
+        audience: jwtConfig.audience,
+      });
+    } catch (error) {
+      throw new Error(`Error generating risk token: ${error.message}`);
+    }
+  },
+  verifyRiskToken: (token) => {
+    try {
+      const rawToken = token?.replace(/^Bearer\s+/i, "").trim();
+      const decoded = jwt.verify(rawToken, jwtConfig.access.secret, {
+        algorithms: [jwtConfig.algorithm],
+        audience: jwtConfig.audience,
+        issuer: jwtConfig.issuer,
+      });
+
+      if (decoded.type !== "risk-login" || !decoded.sub || !decoded.jti) {
+        throw new Error("Invalid risk token claims");
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        return { success: false, message: "Risk verification expired" };
+      }
+      throw new Error(`Invalid risk token: ${error.message}`);
+    }
+  },
 };
 
 export default tokenService;

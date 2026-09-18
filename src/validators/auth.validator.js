@@ -59,3 +59,8 @@ export const twofaRecoverySchema = z.object({
     deviceId: z.string().uuid("Invalid device ID"),
     token: z.string().trim().min(1, {message: "2FA token is required"}),
 });
+export const riskVerificationSchema = z.object({
+    token: z.string().trim().min(1, {message: "Risk verification token is required"}),
+    code: z.string().trim().regex(/^[A-Za-z0-9]{6}$/, {message: "Verification code must be exactly 6 characters"}),
+    deviceId: z.string().uuid("Invalid device ID"),
+});

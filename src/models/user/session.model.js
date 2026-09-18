@@ -10,6 +10,8 @@ const Session = async () => {
         device_id VARCHAR(255) NOT NULL,
         device_name VARCHAR(255) NOT NULL,
         ip_address INET NOT NULL,
+        latitude DECIMAL(9, 6),
+        longitude DECIMAL(9, 6),
         user_agent VARCHAR(255) NOT NULL,
         last_active TIMESTAMP NOT NULL,
         revoked_at TIMESTAMP,
@@ -21,6 +23,8 @@ const Session = async () => {
     await Pool.query(
       `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`
     );
+    await Pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS latitude DECIMAL(9, 6)`);
+    await Pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS longitude DECIMAL(9, 6)`);
     logger.info("sessions table and indexes created");
   } catch (error) {
     logger.error(`Error creating sessions table: ${error.message}`);

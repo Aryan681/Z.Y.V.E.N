@@ -10,6 +10,10 @@ import { UAParser } from "ua-parser-js";
 import crypto from "crypto";
 import redisService from "../services/redis.service.js";
 import qrCodeGenerator from "../utils/qrCode.js";
+import riskService from "../risk/riskl.service.js";
+import riskConstants from "../risk/risk.constants.js";
+import geolocationService from "./geolocation.service.js";
+import ipReputationService from "./ipReputation.service.js";
 const authService = {
   registration: async (name, email, password) => {
     try {
@@ -119,8 +123,54 @@ const authService = {
       throw error;
     }
   },
+  startRiskVerification: async (user) => {
+    try {
+      const riskTokenId = crypto.randomUUID();
+      const riskToken = tokenService.generateRiskToken(user, riskTokenId);
+      const verificationCode = tokenHelper.generateAlphanumericVerificationCode();
+      const key = `auth:risk-login:${riskTokenId}`;
+      const verificationData = JSON.stringify({
+        userId: user.id,
+        codeHash: tokenHelper.hashToken(verificationCode),
+        attempts: 0,
+      });
+
+      await redisService.setWithExpiry(
+        key,
+        verificationData,
+        riskConstants.verification.codeTtlSeconds,
+      );
+
+      try {
+        await emailService.sendRiskVerificationMail(user.email, verificationCode);
+      } catch (error) {
+        await redisService.del(key);
+        throw error;
+      }
+
+      return {
+        success: true,
+        requiresRiskVerification: true,
+        riskToken,
+      };
+    } catch (error) {
+      logger.error(`Risk verification start service error: ${error.message}`);
+      return {
+        success: false,
+        message: "Unable to start sign-in verification",
+      };
+    }
+  },
   createAuthenticatedSession: async (user, sessionContext) => {
     try {
+      const resolvedGeo =
+        sessionContext.geo ||
+        (await geolocationService.resolveIpLocation(sessionContext.ipAddress));
+      const authenticatedSessionContext = {
+        ...sessionContext,
+        geo: resolvedGeo,
+      };
+
       // 1. Generate session ID
       const sessionId = crypto.randomUUID();
 
@@ -133,7 +183,7 @@ const authService = {
       const hashedRefreshToken = tokenHelper.hashToken(refreshToken);
 
       // 4. Parse device information
-      const parser = new UAParser(sessionContext.userAgent);
+      const parser = new UAParser(authenticatedSessionContext.userAgent);
 
       const parsedDevice = parser.getResult();
 
@@ -147,10 +197,11 @@ const authService = {
         sessionId,
         userId: user.id,
         refreshTokenHash: hashedRefreshToken,
-        deviceId: sessionContext.deviceId,
+        deviceId: authenticatedSessionContext.deviceId,
         deviceName,
-        ipAddress: sessionContext.ipAddress,
-        userAgent: sessionContext.userAgent,
+        ipAddress: authenticatedSessionContext.ipAddress,
+        geo: authenticatedSessionContext.geo,
+        userAgent: authenticatedSessionContext.userAgent,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
@@ -202,7 +253,44 @@ const authService = {
           message: "Invalid email or password",
         };
       }
-      if (user.is_2fa_enabled) {
+
+      const [geo, ipReputation] = await Promise.all([
+        sessionContext.geo
+          ? Promise.resolve(sessionContext.geo)
+          : geolocationService.resolveIpLocation(sessionContext.ipAddress),
+        ipReputationService.resolveIpReputation(sessionContext.ipAddress),
+      ]);
+      const riskContext = {
+        ...sessionContext,
+        geo,
+        ipReputation,
+      };
+      const riskAssessment = await riskService.evaluateLoginRisk(
+        user.id,
+        riskContext,
+      );
+
+      if (riskAssessment.decision === riskConstants.decisions.deny) {
+        logger.warn(
+          `Login denied by risk engine for user ${user.id} at score ${riskAssessment.score}`,
+        );
+        return {
+          success: false,
+          message: "Authentication failed",
+        };
+      }
+
+      const requiresTwoFactor =
+        user.is_2fa_enabled ||
+        riskAssessment.decision === riskConstants.decisions.require2FA;
+
+      if (requiresTwoFactor) {
+        if (!user.is_2fa_enabled) {
+          logger.warn(
+            `High-risk login using email verification fallback for user ${user.id}`,
+          );
+          return authService.startRiskVerification(user);
+        }
         const twoFaToken = await authService.generate2faToken(user);
         if (!twoFaToken) {
           return {
@@ -219,7 +307,7 @@ const authService = {
       // Everything after authentication is shared
       const result = await authService.createAuthenticatedSession(
         user,
-        sessionContext,
+        riskContext,
       );
       return result;
     } catch (error) {
@@ -913,6 +1001,78 @@ const authService = {
       logger.error(`Error occur in the twofaVerify service${error} `);
       throw error;  
    }
+  },
+  riskVerify: async (token, code, sessionContext) => {
+    try {
+      const decoded = tokenService.verifyRiskToken(token);
+      if (decoded.success === false) {
+        return decoded;
+      }
+
+      const key = `auth:risk-login:${decoded.jti}`;
+      const storedData = await redisService.get(key);
+      if (!storedData) {
+        return {
+          success: false,
+          message: "Risk verification expired or not found",
+        };
+      }
+
+      const verificationData = JSON.parse(storedData);
+      if (verificationData.attempts >= riskConstants.verification.maximumAttempts) {
+        await redisService.del(key);
+        return {
+          success: false,
+          message: "Too many failed verification attempts",
+        };
+      }
+
+      const receivedCodeHash = Buffer.from(tokenHelper.hashToken(code), "hex");
+      const storedCodeHash = Buffer.from(verificationData.codeHash, "hex");
+      const isCodeValid =
+        receivedCodeHash.length === storedCodeHash.length &&
+        crypto.timingSafeEqual(receivedCodeHash, storedCodeHash);
+      if (!isCodeValid) {
+        verificationData.attempts += 1;
+        if (verificationData.attempts >= riskConstants.verification.maximumAttempts) {
+          await redisService.del(key);
+        } else {
+          await redisService.setWithExpiry(
+            key,
+            JSON.stringify(verificationData),
+            riskConstants.verification.codeTtlSeconds,
+          );
+        }
+
+        return {
+          success: false,
+          message: "Invalid verification code",
+        };
+      }
+
+      const user = await userRepo.findUserById(decoded.sub);
+      if (!user || String(user.id) !== String(verificationData.userId)) {
+        await redisService.del(key);
+        return {
+          success: false,
+          message: "Invalid risk verification",
+        };
+      }
+
+      await redisService.del(key);
+      const result = await authService.createAuthenticatedSession(
+        user,
+        sessionContext,
+      );
+
+      return {
+        success: true,
+        result,
+      };
+    } catch (error) {
+      logger.error(`Risk verification service error: ${error.message}`);
+      throw error;
+    }
   },
   generate2faToken: async (user) => {
     try {

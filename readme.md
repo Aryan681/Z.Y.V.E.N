@@ -74,11 +74,21 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 - **Session Management:** Logout for the current session, a selected session, all sessions, or all sessions except the current one, plus active-session listing.
 - **TOTP Two-Factor Authentication:** Authenticator-app setup with QR code, OTP-confirmed enable/disable, login verification, encrypted TOTP secret storage, and 2FA status checks.
 - **2FA Recovery Codes:** Recovery-code generation and verification.
+- **Adaptive Risk Engine:** Successful logins are scored using new-device, new-IP, unfamiliar-user-agent, rapid-login/device velocity, optional IP reputation, and optional impossible-travel signals; high-risk logins reuse the existing 2FA step-up flow and critical logins are denied.
+- **Server-side Geolocation:** Public login IPs are resolved through the configured geolocation provider and stored as approximate session coordinates for future impossible-travel checks. Private/local IPs and provider failures are ignored.
+- **Cached IP Reputation:** Public login IPs can be checked by a configured reputation provider. Results are cached in Redis with an in-memory fallback, request coalescing, and no database lookup.
 ### 🟡 In Progress / Upcoming (Route Blueprints Added)
 - **Passwordless / Magic Link:** Single-use cryptographic email login tokens.
 - **Passkeys & WebAuthn:** FIDO2 biometric authentication (TouchID, FaceID, Windows Hello).
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
-- **Adaptive Risk Engine:** Anomaly scoring evaluating Impossible Travel, IP reputation, and new device detection to dynamically trigger step-up MFA.
+- **Adaptive Risk Engine Hardening:** Improve provider coverage, failed-login velocity, policy tuning, and risk-event retention.
+- **Risk Monitoring & Audit Service:** Persist risk decisions, maintain an audit trail, expose metrics, and provide security dashboards.
+- **Risk Alerting & Notification Service:** Notify users and security operators about critical risk, repeated challenges, and suspicious account activity.
+- **Risk Policy Configuration Service:** Manage thresholds, weights, trusted devices, allowlists, blocklists, and tenant-specific policies without code changes.
+- **Device Fingerprinting & Trust Service:** Add stronger device binding, device trust history, spoofing detection, and device revocation.
+- **Authentication Abuse Detection Service:** Track failed logins, credential stuffing, password spraying, and distributed attack patterns.
+- **Security Event Pipeline:** Publish authentication and risk events to an event bus or SIEM for centralized analysis and response.
+- **Risk Review / Administration API:** Allow authorized security operators to investigate events, revoke sessions, and manage user risk state.
 
 ---
 
@@ -206,6 +216,7 @@ app.use("/api/v1/auth", authRoutes);
 | `POST` | `/two-fa/enable` | Verify OTP and enable 2FA | JWT Authenticated |
 | `POST` | `/two-fa/disable` | Verify OTP and disable 2FA | JWT Authenticated |
 | `POST` | `/two-fa/verify` | Verify OTP during a 2FA login challenge | Public + 2FA Token |
+| `POST` | `/risk/verify` | Complete high-risk login with emailed OTP fallback | Public + Risk Token |
 | `GET` | `/two-fa/status` | Return the current 2FA status | JWT Authenticated |
 | `POST` | `/two-fa/recovery-codes/generate` | Generate recovery codes | 2FA Recovery |
 | `POST` | `/two-fa/recovery-codes/verify` | Verify a recovery code | 2FA Recovery |
@@ -254,6 +265,8 @@ CREATE TABLE sessions (
     device_id VARCHAR(255),
     device_name VARCHAR(255),
     ip_address VARCHAR(45),
+    latitude DECIMAL(9, 6),
+    longitude DECIMAL(9, 6),
     user_agent TEXT,
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     revoked_at TIMESTAMP,
@@ -277,7 +290,13 @@ CREATE TABLE sessions (
 - [x] **Phase 7.1:** Two-Factor Recovery Codes
 - [ ] **Phase 8:** Passwordless Magic Link Login
 - [ ] **Phase 9:** Passkeys / WebAuthn (FIDO2 Biometric Login)
-- [ ] **Phase 10:** Adaptive Risk Engine (Impossible Travel, Geo-Anomalies, Dynamic MFA)
+- [x] **Phase 10:** Adaptive Risk Engine baseline (new device/IP, optional impossible travel, IP reputation, and dynamic MFA)
+- [ ] **Phase 11:** Risk Monitoring, Risk Events, and Security Audit Trail
+- [ ] **Phase 12:** Risk Alerting and Operator Notifications
+- [ ] **Phase 13:** Dynamic Risk Policy and Trusted-Device Management
+- [ ] **Phase 14:** Device Fingerprinting and Authentication Abuse Detection
+- [ ] **Phase 15:** Security Event Pipeline and SIEM Integration
+- [ ] **Phase 16:** Risk Review Dashboard and Administration APIs
 
 ---
 

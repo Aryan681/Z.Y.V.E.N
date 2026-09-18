@@ -9,6 +9,7 @@ const sessionRepo = {
     deviceId,
     deviceName,
     ipAddress,
+    geo,
     userAgent,
     expiresAt,
   }) => {
@@ -21,6 +22,8 @@ const sessionRepo = {
                     device_id,
                     device_name,
                     ip_address,
+                    latitude,
+                    longitude,
                     user_agent,
                     last_active,
                     expires_at
@@ -33,8 +36,10 @@ const sessionRepo = {
                     $5,
                     $6,
                     $7,
+                    $8,
+                    $9,
                     CURRENT_TIMESTAMP,
-                    $8
+                    $10
                 )
                 RETURNING
                     session_id,
@@ -52,6 +57,8 @@ const sessionRepo = {
         deviceId,
         deviceName,
         ipAddress,
+        geo?.latitude || null,
+        geo?.longitude || null,
         userAgent,
         expiresAt,
       ];
@@ -100,6 +107,8 @@ const sessionRepo = {
           device_id,
           device_name,
           ip_address,
+          latitude,
+          longitude,
           user_agent,
           last_active,
           revoked_at,
@@ -155,6 +164,8 @@ const sessionRepo = {
           device_id,
           device_name,
           ip_address,
+          latitude,
+          longitude,
           user_agent,
           last_active,
           revoked_at,
@@ -216,7 +227,10 @@ const sessionRepo = {
           device_id,
           device_name,
           ip_address,
+          latitude,
+          longitude,
           user_agent,
+          created_at,
           last_active,
           revoked_at,
           expires_at

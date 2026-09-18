@@ -21,5 +21,7 @@ redisClient.on(`reconnecting`, () => {
     logger.warn(`Redis reconnecting...`);
 });
 
-await redisClient.connect();
+redisClient.connect().catch((error) => {
+    logger.error(`Redis initial connection unavailable: ${error.message}`);
+});
 export default redisClient;
