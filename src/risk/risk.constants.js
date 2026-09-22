@@ -40,6 +40,12 @@ const riskConstants = {
     codeTtlSeconds: 600,
     maximumAttempts: 3,
   },
+  alerting: {
+    repeatedChallengeThreshold: 3,
+    repeatedChallengeWindowSeconds: 24 * 60 * 60,
+    criticalUserCooldownSeconds: 15 * 60,
+    suspiciousUserCooldownSeconds: 60 * 60,
+  },
 };
 
 export default riskConstants;

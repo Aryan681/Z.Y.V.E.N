@@ -5,12 +5,18 @@ import redisClient from './config/redis.js';
 import Profile from "./models/user/user.js";
 import Session from "./models/user/session.model.js";
 import RiskEvent from "./models/risk/riskEvent.model.js";
-Profile();
-Session();
-RiskEvent();
+import RiskNotification from "./models/risk/riskNotification.model.js";
+const startServer = async () => {
+  await Profile();
+  await Session();
+  await RiskEvent();
+  await RiskNotification();
 
-const PORT = process.env.PORT || 8080 ;
+  const PORT = process.env.PORT || 8080 ;
 
-app.listen(PORT, ( )=> {
+  app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`) ;
-})
+  });
+};
+
+startServer();

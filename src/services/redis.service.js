@@ -116,6 +116,14 @@ const redisService = {
       throw error;
     }
   },
+  setIfAbsentWithExpiry: async (key, value, seconds) => {
+    try {
+      return await redisClient.set(key, value, { NX: true, EX: seconds });
+    } catch (error) {
+      logger.error(`Redis set-if-absent key ${key} error ${error}`);
+      throw error;
+    }
+  },
   increasField: async (key, field) => {
     try {
       // hincrby increments a specific field inside a Redis Hash by 1

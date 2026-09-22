@@ -29,7 +29,7 @@ const riskEventRepo = {
           user_agent
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
-        RETURNING event_id, user_id, event_type, score, level, decision, created_at`,
+        RETURNING event_id, user_id, event_type, score, level, decision, signals, created_at`,
         [
           crypto.randomUUID(),
           userId || null,
@@ -49,6 +49,17 @@ const riskEventRepo = {
       logger.error(`Error creating risk event: ${error.message}`);
       throw error;
     }
+  },
+  countRecentByDecision: async (userId, decision, windowSeconds) => {
+    const result = await pool.query(
+      `SELECT COUNT(*)::integer AS count
+       FROM risk_events
+       WHERE user_id = $1
+         AND decision = $2
+         AND created_at >= CURRENT_TIMESTAMP - ($3 * INTERVAL '1 second')`,
+      [userId, decision, windowSeconds],
+    );
+    return result.rows[0]?.count || 0;
   },
 };
 

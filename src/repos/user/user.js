@@ -1,5 +1,15 @@
 import pool from "../../config/db.js";
 const userRepo = {
+  findUserById: async (userId) => {
+    const result = await pool.query(
+      `SELECT id, name, email, role
+       FROM users
+       WHERE id = $1 AND isActive = true
+       LIMIT 1`,
+      [userId],
+    );
+    return result.rows[0] || null;
+  },
   findUserByEmail: async (email) => {
     try {
       const query = `

@@ -18,7 +18,7 @@ const failedLoginVelocityService = {
   recordFailedAttempt: async ({ email, ipAddress }) => {
     const keys = getKeys({ email, ipAddress });
 
-    await Promise.all(
+    const counts = await Promise.all(
       keys.map((key) =>
         redisService.ratelimit(
           key,
@@ -26,6 +26,7 @@ const failedLoginVelocityService = {
         ),
       ),
     );
+    return Math.max(0, ...counts.filter(Number.isFinite));
   },
 
   getVelocity: async ({ email, ipAddress }) => {

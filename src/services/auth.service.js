@@ -18,11 +18,15 @@ import failedLoginVelocityService from "../risk/failedLoginVelocity.service.js";
 
 const recordFailedLoginAttempt = async (email, ipAddress) => {
   try {
-    await failedLoginVelocityService.recordFailedAttempt({ email, ipAddress });
+    return await failedLoginVelocityService.recordFailedAttempt({
+      email,
+      ipAddress,
+    });
   } catch (error) {
     // Redis is optional for authentication availability. The normal login
     // rate limiter remains responsible for request throttling.
     logger.warn(`Failed-login velocity counter unavailable: ${error.message}`);
+    return 0;
   }
 };
 
@@ -249,7 +253,15 @@ const authService = {
         };
       }
       if (!user.is_verified) {
-        await recordFailedLoginAttempt(email, sessionContext.ipAddress);
+        const attemptCount = await recordFailedLoginAttempt(
+          email,
+          sessionContext.ipAddress,
+        );
+        await riskService.recordFailedLoginActivity(
+          user.id,
+          sessionContext,
+          attemptCount,
+        );
         logger.warn(`user not verified with email ${email}`);
         return {
           success: false,
@@ -261,7 +273,15 @@ const authService = {
         user.password,
       );
       if (!isPasswordMatch) {
-        await recordFailedLoginAttempt(email, sessionContext.ipAddress);
+        const attemptCount = await recordFailedLoginAttempt(
+          email,
+          sessionContext.ipAddress,
+        );
+        await riskService.recordFailedLoginActivity(
+          user.id,
+          sessionContext,
+          attemptCount,
+        );
         logger.warn(`password not match with the user ${email}`);
         return {
           success: false,
