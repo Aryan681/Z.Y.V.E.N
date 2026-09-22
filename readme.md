@@ -77,13 +77,34 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 - **Adaptive Risk Engine:** Successful logins are scored using new-device, new-IP, unfamiliar-user-agent, rapid-login/device velocity, optional IP reputation, and optional impossible-travel signals; high-risk logins reuse the existing 2FA step-up flow and critical logins are denied.
 - **Server-side Geolocation:** Public login IPs are resolved through the configured geolocation provider and stored as approximate session coordinates for future impossible-travel checks. Private/local IPs and provider failures are ignored.
 - **Cached IP Reputation:** Public login IPs can be checked by a configured reputation provider. Results are cached in Redis with an in-memory fallback, request coalescing, and no database lookup.
+- **Failed-Login Velocity:** Failed attempts are tracked separately in Redis using hashed email/IP keys with a 10-minute TTL. Reaching the threshold contributes a `failed_login_velocity` risk signal.
+- **Persistent Risk Audit:** Login risk assessments are stored in PostgreSQL `risk_events` with score, level, decision, signals, and request context.
+- **Risk Alerting & Notifications:** Critical risk, repeated challenges, failed-login velocity, impossible travel, suspicious IP reputation, and rapid login activity can notify affected users and configured security operators.
+- **Notification Outbox Records:** User/operator notification attempts are stored in `risk_notifications` with deduplication keys, status, attempt count, and delivery errors.
+
+### Risk Alerting Behavior
+
+Risk is evaluated after password verification and before session creation. The result is persisted in `risk_events`, then alert policies are applied:
+
+- **Critical or denied risk:** Notify the affected user and every address in `SECURITY_ALERT_EMAILS`.
+- **Repeated challenges:** Notify the user after three `require_2fa` events for the same account within 24 hours.
+- **Suspicious activity:** Notify the user and operators for failed-login velocity, impossible travel, suspicious IP reputation, or rapid login velocity.
+- **Failed-login velocity:** Five failed attempts for the same hashed email or IP inside 10 minutes create a persistent risk event for known users and trigger suspicious-activity alerting.
+
+User alerts have Redis cooldowns to prevent email floods. Operator alerts are recorded per risk event. Notification delivery failures are retained in `risk_notifications` and do not block authentication.
+
+`SECURITY_ALERT_EMAILS` must contain real security-team recipients, for example:
+
+```env
+SECURITY_ALERT_EMAILS=admin@yourcompany.com,security@yourcompany.com
+```
+
+Unknown-account failures do not send user email, preserving anti-enumeration behavior.
 ### 🟡 In Progress / Upcoming (Route Blueprints Added)
 - **Passwordless / Magic Link:** Single-use cryptographic email login tokens.
 - **Passkeys & WebAuthn:** FIDO2 biometric authentication (TouchID, FaceID, Windows Hello).
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
-- **Adaptive Risk Engine Hardening:** Improve provider coverage, failed-login velocity, policy tuning, and risk-event retention.
-- **Risk Monitoring & Audit Service:** Persist risk decisions, maintain an audit trail, expose metrics, and provide security dashboards.
-- **Risk Alerting & Notification Service:** Notify users and security operators about critical risk, repeated challenges, and suspicious account activity.
+- **Adaptive Risk Engine Hardening:** Improve provider coverage, policy tuning, and risk-event retention.
 - **Risk Policy Configuration Service:** Manage thresholds, weights, trusted devices, allowlists, blocklists, and tenant-specific policies without code changes.
 - **Device Fingerprinting & Trust Service:** Add stronger device binding, device trust history, spoofing detection, and device revocation.
 - **Authentication Abuse Detection Service:** Track failed logins, credential stuffing, password spraying, and distributed attack patterns.
@@ -274,6 +295,37 @@ CREATE TABLE sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Risk Events Table (Persistent Risk Decisions)
+CREATE TABLE risk_events (
+    event_id UUID PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    event_type VARCHAR(64) NOT NULL,
+    score INTEGER NOT NULL,
+    level VARCHAR(32) NOT NULL,
+    decision VARCHAR(32) NOT NULL,
+    signals JSONB NOT NULL DEFAULT '[]'::jsonb,
+    device_id VARCHAR(255),
+    ip_address INET,
+    user_agent VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Risk Notifications Table (User/Operator Delivery Tracking)
+CREATE TABLE risk_notifications (
+    notification_id UUID PRIMARY KEY,
+    event_id UUID REFERENCES risk_events(event_id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    recipient_type VARCHAR(32) NOT NULL,
+    recipient VARCHAR(255) NOT NULL,
+    notification_type VARCHAR(64) NOT NULL,
+    dedupe_key VARCHAR(255) UNIQUE NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    sent_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ---
@@ -291,8 +343,8 @@ CREATE TABLE sessions (
 - [ ] **Phase 8:** Passwordless Magic Link Login
 - [ ] **Phase 9:** Passkeys / WebAuthn (FIDO2 Biometric Login)
 - [x] **Phase 10:** Adaptive Risk Engine baseline (new device/IP, optional impossible travel, IP reputation, and dynamic MFA)
-- [ ] **Phase 11:** Risk Monitoring, Risk Events, and Security Audit Trail
-- [ ] **Phase 12:** Risk Alerting and Operator Notifications
+- [x] **Phase 11:** Risk Monitoring, Risk Events, and Security Audit Trail
+- [x] **Phase 12:** Risk Alerting and Operator Notifications
 - [ ] **Phase 13:** Dynamic Risk Policy and Trusted-Device Management
 - [ ] **Phase 14:** Device Fingerprinting and Authentication Abuse Detection
 - [ ] **Phase 15:** Security Event Pipeline and SIEM Integration
@@ -339,7 +391,15 @@ GOOGLE_LINK_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/link/callback
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_email_app_password
+SMTP_PASS=your_email_app_password
+
+# Comma-separated security operator recipients for risk alerts
+SECURITY_ALERT_EMAILS=security@yourcompany.com,soc@yourcompany.com
+
+# Optional server-side risk enrichment
+GEOLOCATION_API_URL=https://ipapi.co/{ip}/json/
+IP_REPUTATION_API_URL=https://www.ipqualityscore.com/api/json/ip?ip={ip}
+IP_REPUTATION_API_KEY=
 ```
 
 ---
@@ -352,10 +412,11 @@ src/
 ├── constants/          # HTTP status codes & default system constants
 ├── controller/         # Request handling & HTTP response mapping
 ├── middlewares/        # Authentication, Rate Limiting, Zod Validation
-├── models/             # Database model definitions
+├── models/             # Database model definitions (users, sessions, risk events, notifications)
 ├── repos/              # PostgreSQL data access layer (User, Session)
+├── risk/               # Risk rules, engine, event/notification repositories, and alert orchestration
 ├── routers/            # Express endpoint routing
-├── services/           # Core business logic (Auth, Email, Google, Token, Redis)
+├── services/           # Auth, email, risk alerts, Google, token, Redis, and providers
 ├── utils/              # Password hashing, token generators, response formatters
 ├── validators/         # Zod schemas for input validation
 ├── app.js              # Express app setup & middleware pipeline
