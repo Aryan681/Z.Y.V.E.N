@@ -14,6 +14,18 @@ import riskService from "../risk/riskl.service.js";
 import riskConstants from "../risk/risk.constants.js";
 import geolocationService from "./geolocation.service.js";
 import ipReputationService from "./ipReputation.service.js";
+import failedLoginVelocityService from "../risk/failedLoginVelocity.service.js";
+
+const recordFailedLoginAttempt = async (email, ipAddress) => {
+  try {
+    await failedLoginVelocityService.recordFailedAttempt({ email, ipAddress });
+  } catch (error) {
+    // Redis is optional for authentication availability. The normal login
+    // rate limiter remains responsible for request throttling.
+    logger.warn(`Failed-login velocity counter unavailable: ${error.message}`);
+  }
+};
+
 const authService = {
   registration: async (name, email, password) => {
     try {
@@ -229,6 +241,7 @@ const authService = {
     try {
       const user = await userRepo.findUserByEmail(email);
       if (!user) {
+        await recordFailedLoginAttempt(email, sessionContext.ipAddress);
         logger.warn(`user not found with email ${email}`);
         return {
           success: false,
@@ -236,6 +249,7 @@ const authService = {
         };
       }
       if (!user.is_verified) {
+        await recordFailedLoginAttempt(email, sessionContext.ipAddress);
         logger.warn(`user not verified with email ${email}`);
         return {
           success: false,
@@ -247,6 +261,7 @@ const authService = {
         user.password,
       );
       if (!isPasswordMatch) {
+        await recordFailedLoginAttempt(email, sessionContext.ipAddress);
         logger.warn(`password not match with the user ${email}`);
         return {
           success: false,
@@ -262,6 +277,7 @@ const authService = {
       ]);
       const riskContext = {
         ...sessionContext,
+        email,
         geo,
         ipReputation,
       };

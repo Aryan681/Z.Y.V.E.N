@@ -81,6 +81,20 @@ const evaluateIpReputation = (context) => {
       );
 };
 
+const evaluateFailedAttemptVelocity = (context) => {
+  const count = Number(context.failedAttemptVelocity?.count || 0);
+  if (count < riskConstants.velocity.failedAttemptThreshold) return null;
+
+  return createSignal(
+    "failed_login_velocity",
+    riskConstants.velocity.failedAttemptScore,
+    {
+      attemptCount: count,
+      windowMinutes: riskConstants.velocity.windowMinutes,
+    },
+  );
+};
+
 const getRecentSessions = (context, sessions) => {
   const now = new Date(context.now || Date.now()).getTime();
   const windowMilliseconds =
@@ -128,6 +142,7 @@ const evaluateRiskSignals = (context, sessions = []) =>
     evaluateUserAgent(context, sessions),
     evaluateImpossibleTravel(context, sessions),
     evaluateIpReputation(context),
+    evaluateFailedAttemptVelocity(context),
     ...evaluateVelocity(context, sessions),
   ].filter(Boolean);
 

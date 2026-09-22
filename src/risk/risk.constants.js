@@ -33,6 +33,8 @@ const riskConstants = {
     deviceThreshold: 3,
     rapidLoginScore: 25,
     rapidDeviceScore: 25,
+    failedAttemptThreshold: 5,
+    failedAttemptScore: 25,
   },
   verification: {
     codeTtlSeconds: 600,

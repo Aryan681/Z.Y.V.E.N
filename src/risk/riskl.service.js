@@ -1,14 +1,19 @@
 import logger from "../config/logger.js";
 import riskRepo from "./risk.repo.js";
 import evaluateRisk from "./risk.engine.js";
+import failedLoginVelocityService from "./failedLoginVelocity.service.js";
 
 const riskService = {
   evaluateLoginRisk: async (userId, sessionContext) => {
     try {
-      const sessions = await riskRepo.findRecentUserSessions(userId);
+      const [sessions, failedAttemptVelocity] = await Promise.all([
+        riskRepo.findRecentUserSessions(userId),
+        failedLoginVelocityService.getVelocity(sessionContext),
+      ]);
       const riskAssessment = evaluateRisk(
         {
           ...sessionContext,
+          failedAttemptVelocity,
           now: sessionContext.now || new Date(),
         },
         sessions,
