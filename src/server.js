@@ -4,8 +4,10 @@ import "./config/db.js" ;
 import redisClient from './config/redis.js';
 import Profile from "./models/user/user.js";
 import Session from "./models/user/session.model.js";
+import RiskEvent from "./models/risk/riskEvent.model.js";
 Profile();
 Session();
+RiskEvent();
 
 const PORT = process.env.PORT || 8080 ;
 

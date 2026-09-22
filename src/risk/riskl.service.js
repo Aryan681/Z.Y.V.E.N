@@ -2,6 +2,7 @@ import logger from "../config/logger.js";
 import riskRepo from "./risk.repo.js";
 import evaluateRisk from "./risk.engine.js";
 import failedLoginVelocityService from "./failedLoginVelocity.service.js";
+import riskEventRepo from "./riskEvent.repo.js";
 
 const riskService = {
   evaluateLoginRisk: async (userId, sessionContext) => {
@@ -30,6 +31,23 @@ const riskService = {
           },
           "Risk engine login assessment",
         );
+      }
+
+      try {
+        await riskEventRepo.createRiskEvent({
+          userId,
+          score: riskAssessment.score,
+          level: riskAssessment.level,
+          decision: riskAssessment.decision,
+          signals: riskAssessment.signals,
+          deviceId: sessionContext.deviceId,
+          ipAddress: sessionContext.ipAddress,
+          userAgent: sessionContext.userAgent,
+        });
+      } catch (error) {
+        // Audit persistence is valuable, but it must not turn a database
+        // audit outage into an authentication outage.
+        logger.error(`Risk event persistence unavailable: ${error.message}`);
       }
 
       return riskAssessment;
