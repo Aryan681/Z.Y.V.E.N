@@ -6,11 +6,13 @@ import Profile from "./models/user/user.js";
 import Session from "./models/user/session.model.js";
 import RiskEvent from "./models/risk/riskEvent.model.js";
 import RiskNotification from "./models/risk/riskNotification.model.js";
+import Device from "./models/user/device.model.js";
 const startServer = async () => {
   await Profile();
   await Session();
   await RiskEvent();
   await RiskNotification();
+  await Device();
 
   const PORT = process.env.PORT || 8080 ;
 

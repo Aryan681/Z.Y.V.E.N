@@ -5,6 +5,7 @@ import failedLoginVelocityService from "./failedLoginVelocity.service.js";
 import riskEventRepo from "../repo/riskEvent.repo.js";
 import riskAlertService from "../../services/riskAlert.service.js";
 import riskConstants from "../constants/risk.constants.js";
+import deviceService from "./device.service.js";
 
 const riskService = {
   recordFailedLoginActivity: async (userId, sessionContext, attemptCount) => {
@@ -48,13 +49,14 @@ const riskService = {
 
   evaluateLoginRisk: async (userId, sessionContext) => {
     try {
-      const [sessions, failedAttemptVelocity] = await Promise.all([
+      const [sessions, failedAttemptVelocity, riskContext] = await Promise.all([
         riskRepo.findRecentUserSessions(userId),
         failedLoginVelocityService.getVelocity(sessionContext),
+        deviceService.enrichRiskContext(userId, sessionContext),
       ]);
       const riskAssessment = evaluateRisk(
         {
-          ...sessionContext,
+          ...riskContext,
           failedAttemptVelocity,
           now: sessionContext.now || new Date(),
         },

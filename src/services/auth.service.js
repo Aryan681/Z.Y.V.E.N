@@ -15,6 +15,9 @@ import riskConstants from "../risk/constants/risk.constants.js";
 import geolocationService from "./geolocation.service.js";
 import ipReputationService from "./ipReputation.service.js";
 import failedLoginVelocityService from "../risk/services/failedLoginVelocity.service.js";
+import deviceService from "../risk/services/device.service.js";
+
+const RECENT_2FA_TTL_SECONDS = 10 * 60;
 
 const recordFailedLoginAttempt = async (email, ipAddress) => {
   try {
@@ -214,6 +217,7 @@ const authService = {
         userId: user.id,
         refreshTokenHash: hashedRefreshToken,
         deviceId: authenticatedSessionContext.deviceId,
+        deviceFingerprintHash: deviceService.getFingerprintHash(authenticatedSessionContext),
         deviceName,
         ipAddress: authenticatedSessionContext.ipAddress,
         geo: authenticatedSessionContext.geo,
@@ -226,6 +230,16 @@ const authService = {
           success: false,
           message: "Error creating user session",
         };
+      }
+
+      try {
+        await deviceService.recordSuccessfulAuthentication(
+          user.id,
+          authenticatedSessionContext,
+          deviceName,
+        );
+      } catch (error) {
+        logger.error(`Device trust persistence unavailable: ${error.message}`);
       }
 
       return {
@@ -838,6 +852,39 @@ const authService = {
       throw error;
     } 
   },
+  listDevices: async (userId) => ({
+    success: true,
+    devices: await deviceService.listDevices(userId),
+  }),
+  trustDevice: async (userId, deviceId, password, sessionId) => {
+    if (password) {
+      const user = await userRepo.findUserById(userId);
+      const validPassword = user && await passwordHelper.verifyPassword(password, user.password);
+      if (!validPassword) {
+        return { success: false, message: "Password confirmation failed" };
+      }
+    } else {
+      const recentTwoFactor = await redisService.get(
+        `auth:recent-2fa:${userId}:${sessionId}`,
+      );
+      if (!recentTwoFactor) {
+        return {
+          success: false,
+          message: "Recent 2FA or password confirmation is required",
+        };
+      }
+    }
+    const device = await deviceService.trustDevice(userId, deviceId);
+    return device
+      ? { success: true, device }
+      : { success: false, message: "Device not found" };
+  },
+  revokeDevice: async (userId, deviceId) => {
+    const device = await deviceService.revokeDevice(userId, deviceId);
+    return device
+      ? { success: true, device, message: "Device revoked successfully" }
+      : { success: false, message: "Device not found" };
+  },
   twofaSetup: async (userId) => {
     try {
       const user = await userRepo.findUserById(userId);
@@ -1025,10 +1072,17 @@ const authService = {
           message: "Invalid OTP",
         };
       }
-       const result = await authService.createAuthenticatedSession(
+      const result = await authService.createAuthenticatedSession(
         user,
         sessionContext,
       );
+      if (result.success && result.session?.session_id) {
+        await redisService.setWithExpiry(
+          `auth:recent-2fa:${user.id}:${result.session.session_id}`,
+          "1",
+          RECENT_2FA_TTL_SECONDS,
+        );
+      }
       return {
         success: true,
         result,
@@ -1217,6 +1271,13 @@ const authService = {
         user,
         sessionContext,
       );
+      if (result.success && result.session?.session_id) {
+        await redisService.setWithExpiry(
+          `auth:recent-2fa:${user.id}:${result.session.session_id}`,
+          "1",
+          RECENT_2FA_TTL_SECONDS,
+        );
+      }
       return {
         success: true,
         result,

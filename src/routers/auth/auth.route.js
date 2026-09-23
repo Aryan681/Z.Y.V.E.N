@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authController from "../../controller/authController.js";
-import {riskVerificationSchema,twofaRecoverySchema,deleteAccountSchema,twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
+import {riskVerificationSchema,twofaRecoverySchema,deviceTrustSchema,deleteAccountSchema,twofaOtpSchema,twofaVerifySchema,logoutSchema,registrationSchema,resendVerificationSchema,loginSchema,refreshTokenSchema, passwrodResetSchema,forgotPasswordSchema ,changeEmailSchema,changePasswordSchema ,changeEmailVerifySchema} from "../../validators/auth.validator.js";
 import validate from "../../middlewares/validator.js";
 import authenticate from "../../middlewares/auth.middleware.js";
 import ratelimiter from "../../middlewares/rateLimit.middleware.js";
@@ -37,6 +37,9 @@ router.route("/change-email/verify").post(authenticate.verifyToken,validate(chan
 // logout & session management routes 
 router.route("/logout").post(validate(logoutSchema), authenticate.verifyToken, authController.logout);
 router.route("/sessions").get(ratelimiter.sessionsRateLimit,authenticate.verifyToken, authController.allSessions);
+router.route("/devices").get(authenticate.verifyToken, authController.devices);
+router.route("/devices/:deviceId/trust").post(authenticate.verifyToken, validate(deviceTrustSchema), authController.trustDevice);
+router.route("/devices/:deviceId").delete(authenticate.verifyToken, authController.revokeDevice);
 
 // 2FA / TOTP (Authenticator App) routes
 router.route("/two-fa/status").get(authenticate.verifyToken, authController.twofaStatus);

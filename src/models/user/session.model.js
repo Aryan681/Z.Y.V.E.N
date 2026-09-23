@@ -8,6 +8,7 @@ const Session = async () => {
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         refresh_token_hash VARCHAR(255) UNIQUE NOT NULL,
         device_id VARCHAR(255) NOT NULL,
+        device_fingerprint_hash VARCHAR(64),
         device_name VARCHAR(255) NOT NULL,
         ip_address INET NOT NULL,
         latitude DECIMAL(9, 6),
@@ -25,6 +26,7 @@ const Session = async () => {
     );
     await Pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS latitude DECIMAL(9, 6)`);
     await Pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS longitude DECIMAL(9, 6)`);
+    await Pool.query(`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS device_fingerprint_hash VARCHAR(64)`);
     logger.info("sessions table and indexes created");
   } catch (error) {
     logger.error(`Error creating sessions table: ${error.message}`);

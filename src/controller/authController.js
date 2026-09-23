@@ -4,6 +4,13 @@ import authService from "../services/auth.service.js";
 import defaults from "../constants/defaults.js";
 import googleService from "../services/google.service.js";
 import { Readable } from 'stream';
+
+const getDeviceHeaders = (req) => ({
+  acceptLanguage: req.get("accept-language"),
+  secChUa: req.get("sec-ch-ua"),
+  secChUaPlatform: req.get("sec-ch-ua-platform"),
+  secChUaMobile: req.get("sec-ch-ua-mobile"),
+});
 const authController = {
   registration: async (req, res) => {
     try {
@@ -133,6 +140,7 @@ const authController = {
         deviceId,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"] || "unknown",
+        deviceHeaders: getDeviceHeaders(req),
       };
       const verifying = await authService.login(
         email,
@@ -291,6 +299,7 @@ const authController = {
         ipAddress: req.ip,
         userAgent: req.get("user-agent") || "unknown",
         deviceId: req.get("x-device-id") || "unknown",
+        deviceHeaders: getDeviceHeaders(req),
       };
 
       const result = await googleService.handleGoogleCallback(
@@ -644,6 +653,68 @@ const authController = {
       );
     }
   },
+  devices: async (req, res) => {
+    try {
+      const result = await authService.listDevices(req.user.sub);
+      return responseHelper.customResponse(
+        res,
+        defaults.OK_CODE,
+        defaults.SUCCESS_MESSAGE,
+        result,
+      );
+    } catch (error) {
+      logger.error(`Error listing devices: ${error.message}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "Unable to list devices" },
+      );
+    }
+  },
+  trustDevice: async (req, res) => {
+    try {
+      const result = await authService.trustDevice(
+        req.user.sub,
+        req.params.deviceId,
+        req.body.password,
+        req.user.sid,
+      );
+      return responseHelper.customResponse(
+        res,
+        result.success ? defaults.OK_CODE : defaults.BAD_REQUEST_CODE,
+        result.message || defaults.SUCCESS_MESSAGE,
+        result,
+      );
+    } catch (error) {
+      logger.error(`Error trusting device: ${error.message}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "Unable to trust device" },
+      );
+    }
+  },
+  revokeDevice: async (req, res) => {
+    try {
+      const result = await authService.revokeDevice(req.user.sub, req.params.deviceId);
+      return responseHelper.customResponse(
+        res,
+        result.success ? defaults.OK_CODE : defaults.NOT_FOUND_CODE,
+        result.message || defaults.SUCCESS_MESSAGE,
+        result,
+      );
+    } catch (error) {
+      logger.error(`Error revoking device: ${error.message}`);
+      return responseHelper.customResponse(
+        res,
+        defaults.INTERNAL_SERVER_ERROR_CODE,
+        defaults.SERVER_ERROR_MESSAGE,
+        { error: "Unable to revoke device" },
+      );
+    }
+  },
   twofaSetup: async (req,res) => {
     try{
       const userId = req.user.sub;
@@ -765,6 +836,7 @@ const authController = {
         deviceId,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"] || "unknown",
+        deviceHeaders: getDeviceHeaders(req),
       };
       const result = await authService.twofaVerify(token, otp,sessionContext);
       if (!result.success) {
@@ -807,6 +879,7 @@ const authController = {
         deviceId,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"] || "unknown",
+        deviceHeaders: getDeviceHeaders(req),
       };
       const result = await authService.riskVerify(
         token,
@@ -936,6 +1009,7 @@ const authController = {
         deviceId,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"] || "unknown",
+        deviceHeaders: getDeviceHeaders(req),
       };
       const result = await authService.twofaRecoveryVerify( token ,recoveryCode, sessionContext);
       if (!result.success) {

@@ -1,4 +1,5 @@
 import riskConstants from "../constants/risk.constants.js";
+import deviceConstants from "../constants/device.constants.js";
 import {
   calculateDistanceKm,
   calculateHoursBetween,
@@ -95,6 +96,26 @@ const evaluateFailedAttemptVelocity = (context) => {
   );
 };
 
+const evaluateDeviceTrust = (context) => {
+  const profile = context.deviceProfile;
+  if (!profile) return [];
+
+  const signals = [];
+  if (profile.revoked) {
+    signals.push(
+      createSignal("revoked_device", deviceConstants.signals.revokedDeviceScore),
+    );
+  } else if (profile.fingerprintMismatch) {
+    signals.push(
+      createSignal(
+        "device_fingerprint_mismatch",
+        deviceConstants.signals.fingerprintMismatchScore,
+      ),
+    );
+  }
+  return signals;
+};
+
 const getRecentSessions = (context, sessions) => {
   const now = new Date(context.now || Date.now()).getTime();
   const windowMilliseconds =
@@ -143,6 +164,7 @@ const evaluateRiskSignals = (context, sessions = []) =>
     evaluateImpossibleTravel(context, sessions),
     evaluateIpReputation(context),
     evaluateFailedAttemptVelocity(context),
+    ...evaluateDeviceTrust(context),
     ...evaluateVelocity(context, sessions),
   ].filter(Boolean);
 

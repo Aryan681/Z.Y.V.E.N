@@ -64,3 +64,6 @@ export const riskVerificationSchema = z.object({
     code: z.string().trim().regex(/^[A-Za-z0-9]{6}$/, {message: "Verification code must be exactly 6 characters"}),
     deviceId: z.string().uuid("Invalid device ID"),
 });
+export const deviceTrustSchema = z.object({
+    password: z.string().min(8, {message: "Password must be at least 8 characters long"}).optional(),
+});

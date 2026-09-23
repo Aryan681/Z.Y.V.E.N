@@ -7,6 +7,7 @@ const sessionRepo = {
     userId,
     refreshTokenHash,
     deviceId,
+    deviceFingerprintHash,
     deviceName,
     ipAddress,
     geo,
@@ -20,6 +21,7 @@ const sessionRepo = {
                     user_id,
                     refresh_token_hash,
                     device_id,
+                    device_fingerprint_hash,
                     device_name,
                     ip_address,
                     latitude,
@@ -38,8 +40,9 @@ const sessionRepo = {
                     $7,
                     $8,
                     $9,
+                    $10,
                     CURRENT_TIMESTAMP,
-                    $10
+                    $11
                 )
                 RETURNING
                     session_id,
@@ -55,6 +58,7 @@ const sessionRepo = {
         userId,
         refreshTokenHash,
         deviceId,
+        deviceFingerprintHash || null,
         deviceName,
         ipAddress,
         geo?.latitude || null,

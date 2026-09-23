@@ -106,10 +106,8 @@ Unknown-account failures do not send user email, preserving anti-enumeration beh
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
 - **Adaptive Risk Engine Hardening:** Improve provider coverage, policy tuning, and risk-event retention.
 - **Risk Policy Configuration Service:** Manage thresholds, weights, trusted devices, allowlists, blocklists, and tenant-specific policies without code changes.
-- **Device Fingerprinting & Trust Service:** Add stronger device binding, device trust history, spoofing detection, and device revocation.
+- **Device Fingerprinting & Trust Service:** Server-observed device fingerprints, trust history, risk checks, and device revocation.
 - **Authentication Abuse Detection Service:** Track failed logins, credential stuffing, password spraying, and distributed attack patterns.
-- **Security Event Pipeline:** Publish authentication and risk events to an event bus or SIEM for centralized analysis and response.
-- **Risk Review / Administration API:** Allow authorized security operators to investigate events, revoke sessions, and manage user risk state.
 
 ---
 
@@ -233,6 +231,9 @@ app.use("/api/v1/auth", authRoutes);
 | `POST` | `/change-email/verify`| Verify dual codes & update email | JWT Authenticated |
 | `POST` | `/logout` | Revoke one or more sessions according to `scope` | JWT Authenticated |
 | `GET` | `/sessions` | List active sessions and device metadata | JWT Authenticated |
+| `GET` | `/devices` | List registered device fingerprints and trust status | JWT Authenticated |
+| `POST` | `/devices/:deviceId/trust` | Trust or restore a device | JWT Authenticated |
+| `DELETE` | `/devices/:deviceId` | Revoke a device and its active sessions | JWT Authenticated |
 | `POST` | `/two-fa/setup` | Generate an authenticator QR code | JWT Authenticated |
 | `POST` | `/two-fa/enable` | Verify OTP and enable 2FA | JWT Authenticated |
 | `POST` | `/two-fa/disable` | Verify OTP and disable 2FA | JWT Authenticated |
@@ -346,9 +347,7 @@ CREATE TABLE risk_notifications (
 - [x] **Phase 11:** Risk Monitoring, Risk Events, and Security Audit Trail
 - [x] **Phase 12:** Risk Alerting and Operator Notifications
 - [ ] **Phase 13:** Dynamic Risk Policy and Trusted-Device Management
-- [ ] **Phase 14:** Device Fingerprinting and Authentication Abuse Detection
-- [ ] **Phase 15:** Security Event Pipeline and SIEM Integration
-- [ ] **Phase 16:** Risk Review Dashboard and Administration APIs
+- [x] **Phase 14:** Device Fingerprinting and Authentication Abuse Detection
 
 ---
 
