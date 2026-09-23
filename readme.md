@@ -81,6 +81,7 @@ Sentinel IAM operates as a centralized identity engine that normalizes authentic
 - **Persistent Risk Audit:** Login risk assessments are stored in PostgreSQL `risk_events` with score, level, decision, signals, and request context.
 - **Risk Alerting & Notifications:** Critical risk, repeated challenges, failed-login velocity, impossible travel, suspicious IP reputation, and rapid login activity can notify affected users and configured security operators.
 - **Notification Outbox Records:** User/operator notification attempts are stored in `risk_notifications` with deduplication keys, status, attempt count, and delivery errors.
+- **Device Fingerprinting & Trust:** Server-observed browser signals are HMAC-hashed into device fingerprints. Devices have trust history, risk checks for fingerprint changes, and revocation that immediately invalidates their active sessions.
 
 ### Risk Alerting Behavior
 
@@ -101,12 +102,10 @@ SECURITY_ALERT_EMAILS=admin@yourcompany.com,security@yourcompany.com
 
 Unknown-account failures do not send user email, preserving anti-enumeration behavior.
 ### 🟡 In Progress / Upcoming (Route Blueprints Added)
-- **Passwordless / Magic Link:** Single-use cryptographic email login tokens.
 - **Passkeys & WebAuthn:** FIDO2 biometric authentication (TouchID, FaceID, Windows Hello).
 - **Workspace / Team Invitations:** Cryptographic invitation tokens for multi-tenant onboarding.
 - **Adaptive Risk Engine Hardening:** Improve provider coverage, policy tuning, and risk-event retention.
 - **Risk Policy Configuration Service:** Manage thresholds, weights, trusted devices, allowlists, blocklists, and tenant-specific policies without code changes.
-- **Device Fingerprinting & Trust Service:** Server-observed device fingerprints, trust history, risk checks, and device revocation.
 - **Authentication Abuse Detection Service:** Track failed logins, credential stuffing, password spraying, and distributed attack patterns.
 
 ---
@@ -242,16 +241,17 @@ app.use("/api/v1/auth", authRoutes);
 | `GET` | `/two-fa/status` | Return the current 2FA status | JWT Authenticated |
 | `POST` | `/two-fa/recovery-codes/generate` | Generate recovery codes | 2FA Recovery |
 | `POST` | `/two-fa/recovery-codes/verify` | Verify a recovery code | 2FA Recovery |
+| `DELETE` | `/account/delete` | Delete the user account and revoke its sessions | JWT Authenticated |
 
 ### 🟡 Blueprint Endpoints (Commented in `auth.route.js`)
 | Method | Endpoint | Description | Target Flow |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/passwordless/send-link`| Send magic login link to email | Passwordless |
-| `GET` | `/passwordless/verify` | Verify magic link token & issue JWT | Passwordless |
-| `POST` | `/passkey/register/options`| Get WebAuthn registration options | Passkeys / FIDO2 |
+| `POST` | `/passkey/register/options` | Get WebAuthn registration options | Passkeys / FIDO2 |
 | `POST` | `/passkey/register/verify` | Verify WebAuthn registration | Passkeys / FIDO2 |
+| `POST` | `/passkey/login/options` | Get WebAuthn login options | Passkeys / FIDO2 |
+| `POST` | `/passkey/login/verify` | Verify WebAuthn login | Passkeys / FIDO2 |
+| `POST` | `/invite` | Invite a user to a workspace | Team Onboarding |
 | `POST` | `/invite-register` | Register user via invitation token | Team Onboarding |
-| `DELETE`| `/account` | Delete user account & scrub sessions | GDPR / Lifecycle |
 
 ---
 
@@ -341,13 +341,12 @@ CREATE TABLE risk_notifications (
 - [x] **Phase 6:** Session Management APIs (`/logout`, `/sessions`)
 - [x] **Phase 7:** Two-Factor Authentication (TOTP setup, enable, login verification, disable, and status)
 - [x] **Phase 7.1:** Two-Factor Recovery Codes
-- [ ] **Phase 8:** Passwordless Magic Link Login
-- [ ] **Phase 9:** Passkeys / WebAuthn (FIDO2 Biometric Login)
-- [x] **Phase 10:** Adaptive Risk Engine baseline (new device/IP, optional impossible travel, IP reputation, and dynamic MFA)
-- [x] **Phase 11:** Risk Monitoring, Risk Events, and Security Audit Trail
-- [x] **Phase 12:** Risk Alerting and Operator Notifications
-- [ ] **Phase 13:** Dynamic Risk Policy and Trusted-Device Management
-- [x] **Phase 14:** Device Fingerprinting and Authentication Abuse Detection
+- [ ] **Phase 8:** Passkeys / WebAuthn (FIDO2 Biometric Login)
+- [x] **Phase 9:** Adaptive Risk Engine baseline (new device/IP, optional impossible travel, IP reputation, and dynamic MFA)
+- [x] **Phase 10:** Risk Monitoring, Risk Events, and Security Audit Trail
+- [x] **Phase 11:** Risk Alerting and Operator Notifications
+- [ ] **Phase 12:** Dynamic Risk Policy and Trusted-Device Management
+- [x] **Phase 13:** Device Fingerprinting and Authentication Abuse Detection
 
 ---
 
