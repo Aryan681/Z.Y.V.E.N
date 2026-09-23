@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import logger from "../config/logger.js";
-import redisService from "../services/redis.service.js";
-import riskConstants from "./risk.constants.js";
+import logger from "../../config/logger.js";
+import redisService from "../../services/redis.service.js";
+import riskConstants from "../constants/risk.constants.js";
 
 const keyPart = (value) =>
   crypto

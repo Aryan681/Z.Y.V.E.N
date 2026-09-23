@@ -1,10 +1,10 @@
-import logger from "../config/logger.js";
-import riskRepo from "./risk.repo.js";
-import evaluateRisk from "./risk.engine.js";
+import logger from "../../config/logger.js";
+import riskRepo from "../repo/risk.repo.js";
+import evaluateRisk from "../core/risk.engine.js";
 import failedLoginVelocityService from "./failedLoginVelocity.service.js";
-import riskEventRepo from "./riskEvent.repo.js";
-import riskAlertService from "../services/riskAlert.service.js";
-import riskConstants from "./risk.constants.js";
+import riskEventRepo from "../repo/riskEvent.repo.js";
+import riskAlertService from "../../services/riskAlert.service.js";
+import riskConstants from "../constants/risk.constants.js";
 
 const riskService = {
   recordFailedLoginActivity: async (userId, sessionContext, attemptCount) => {

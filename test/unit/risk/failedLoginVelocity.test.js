@@ -1,4 +1,4 @@
-import evaluateRiskSignals from "../../../src/risk/risk.rules.js";
+import evaluateRiskSignals from "../../../src/risk/core/risk.rules.js";
 
 describe("failed login velocity", () => {
   it("adds a separate signal from Redis-provided failed-attempt counts", () => {

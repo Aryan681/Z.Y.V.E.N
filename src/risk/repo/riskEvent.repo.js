@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import pool from "../config/db.js";
-import logger from "../config/logger.js";
+import pool from "../../config/db.js";
+import logger from "../../config/logger.js";
 
 const riskEventRepo = {
   createRiskEvent: async ({

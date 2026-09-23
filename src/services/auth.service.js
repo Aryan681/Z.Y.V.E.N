@@ -10,11 +10,11 @@ import { UAParser } from "ua-parser-js";
 import crypto from "crypto";
 import redisService from "../services/redis.service.js";
 import qrCodeGenerator from "../utils/qrCode.js";
-import riskService from "../risk/riskl.service.js";
-import riskConstants from "../risk/risk.constants.js";
+import riskService from "../risk/services/risk.service.js";
+import riskConstants from "../risk/constants/risk.constants.js";
 import geolocationService from "./geolocation.service.js";
 import ipReputationService from "./ipReputation.service.js";
-import failedLoginVelocityService from "../risk/failedLoginVelocity.service.js";
+import failedLoginVelocityService from "../risk/services/failedLoginVelocity.service.js";
 
 const recordFailedLoginAttempt = async (email, ipAddress) => {
   try {

@@ -1,9 +1,9 @@
-import riskConstants from "./risk.constants.js";
+import riskConstants from "../constants/risk.constants.js";
 import {
   calculateDistanceKm,
   calculateHoursBetween,
   normalizeIpReputation,
-} from "./risk.utils.js";
+} from "../utils/risk.utils.js";
 
 const createSignal = (type, score, details) => ({ type, score, details });
 

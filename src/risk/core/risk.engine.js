@@ -1,6 +1,6 @@
-import riskConstants from "./risk.constants.js";
+import riskConstants from "../constants/risk.constants.js";
 import evaluateRiskSignals from "./risk.rules.js";
-import { clampScore } from "./risk.utils.js";
+import { clampScore } from "../utils/risk.utils.js";
 
 const getRiskLevel = (score) => {
   if (score >= riskConstants.thresholds.critical) return riskConstants.levels.critical;

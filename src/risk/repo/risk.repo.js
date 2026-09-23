@@ -1,4 +1,4 @@
-import sessionRepo from "../repos/user/session.js";
+import sessionRepo from "../../repos/user/session.js";
 
 const riskRepo = {
   findRecentUserSessions: async (userId) => {

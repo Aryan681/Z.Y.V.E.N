@@ -2,9 +2,9 @@ import logger from "../config/logger.js";
 import emailService from "./email.service.js";
 import userRepo from "../repos/user/user.js";
 import redisService from "./redis.service.js";
-import riskConstants from "../risk/risk.constants.js";
-import riskEventRepo from "../risk/riskEvent.repo.js";
-import riskNotificationRepo from "../risk/riskNotification.repo.js";
+import riskConstants from "../risk/constants/risk.constants.js";
+import riskEventRepo from "../risk/repo/riskEvent.repo.js";
+import riskNotificationRepo from "../risk/repo/riskNotification.repo.js";
 
 const suspiciousSignals = new Set([
   "failed_login_velocity",
