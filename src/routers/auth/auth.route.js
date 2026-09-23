@@ -51,10 +51,6 @@ router.route("/risk/verify").post(ratelimiter.loginRateLimit, validate(riskVerif
 router.route("/two-fa/recovery-codes/generate").post(ratelimiter.recoveryCodesRateLimit, authenticate.verifyToken, authController.generateRecoveryCodes);
 router.route("/two-fa/recovery-codes/verify").post(validate(twofaRecoverySchema), authController.twofaRecoveryVerify);
 
-// Magic Link (Passwordless Email) routes
-// router.route("/passwordless/send-link").post(ratelimiter.forgotPasswordRateLimit, validate(passwordlessSchema), authController.sendMagicLink);
-// router.route("/passwordless/verify").get(authController.verifyMagicLink);
-
 // Passkeys / WebAuthn (Biometrics & FIDO2) routes
 // router.route("/passkey/register/options").post(authenticate.verifyToken, authController.passkeyRegisterOptions);
 // router.route("/passkey/register/verify").post(authenticate.verifyToken, authController.passkeyRegisterVerify);
